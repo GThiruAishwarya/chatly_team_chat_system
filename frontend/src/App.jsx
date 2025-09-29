@@ -18,6 +18,9 @@ function App() {
   let dispatch=useDispatch()
 
   useEffect(()=>{
+    if(typeof Notification !== 'undefined' && Notification.permission === 'default'){
+      Notification.requestPermission().catch(()=>{})
+    }
     if(userData){
       const socketio=io(`${serverUrl}`,{
         query:{
@@ -28,6 +31,17 @@ function App() {
         
         socketio.on("getOnlineUsers",(users)=>{
           dispatch(setOnlineUsers(users))
+        })
+        // basic push notification
+        socketio.on("newMessage", (mess)=>{
+          if(Notification?.permission==="granted"){
+            new Notification("New message", { body: mess.message || "New attachment" })
+          }
+        })
+        socketio.on("newGroupMessage", (mess)=>{
+          if(Notification?.permission==="granted"){
+            new Notification("New group message", { body: mess.message || "New attachment" })
+          }
         })
         
         return ()=>socketio.close()

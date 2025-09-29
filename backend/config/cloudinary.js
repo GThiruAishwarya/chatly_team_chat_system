@@ -7,7 +7,7 @@ cloudinary.config({
     api_secret: process.env.API_SECRET
 })
 try {
-    const uploadResult = await cloudinary.uploader.upload(filePath) 
+    const uploadResult = await cloudinary.uploader.upload(filePath, { resource_type: "auto" }) 
     fs.unlinkSync(filePath)
     return uploadResult.secure_url
 

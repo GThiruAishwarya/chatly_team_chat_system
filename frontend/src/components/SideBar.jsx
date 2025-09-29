@@ -6,10 +6,14 @@ import { RxCross2 } from "react-icons/rx";
 import { BiLogOutCircle } from "react-icons/bi";
 import { serverUrl } from '../main';
 import axios from 'axios';
-import { setOtherUsers, setSearchData, setSelectedUser, setUserData } from '../redux/userSlice';
+import { setOtherUsers, setSearchData, setSelectedGroup, setSelectedUser, setUserData } from '../redux/userSlice';
 import { useNavigate } from 'react-router-dom';
 function SideBar() {
-    let {userData,otherUsers,selectedUser,onlineUsers,searchData} = useSelector(state=>state.user)
+    let {userData,otherUsers,selectedUser,selectedGroup,onlineUsers,searchData,groups} = useSelector(state=>state.user)
+    let [showCreateGroup,setShowCreateGroup]=useState(false)
+    let [groupName,setGroupName]=useState("")
+    let [groupImage,setGroupImage]=useState(null)
+    let groupInput=React.useRef()
     let [search,setSearch]=useState(false)
     let [input,setInput]=useState("")
 let dispatch=useDispatch()
@@ -102,12 +106,54 @@ console.log(error)
       </div>
 
       <div className='w-full h-[50%] overflow-auto flex flex-col gap-[20px] items-center mt-[20px]'>
+      <div className='w-[95%] flex justify-between items-center'>
+        <h2 className='text-gray-700 font-semibold'>Groups</h2>
+        <button className='text-sm bg-[#20c7ff] text-white px-3 py-1 rounded-full shadow' onClick={()=>setShowCreateGroup(true)}>New Group</button>
+      </div>
+      {groups?.map(g=> (
+        <div className='w-[95%] h-[60px] flex items-center gap-[20px] shadow-gray-500 bg-white shadow-lg rounded-full hover:bg-[#78cae5] cursor-pointer' onClick={()=>{dispatch(setSelectedGroup(g)); dispatch(setSelectedUser(null))}}>
+          <div className='w-[60px] h-[60px]   rounded-full overflow-hidden flex justify-center items-center '>
+            <img src={g.image || dp} alt="" className='h-[100%]' />
+          </div>
+          <h1 className='text-gray-800 font-semibold text-[20px]'>{g.name}</h1>
+        </div>
+      ))}
 {otherUsers?.map((user)=>(
     <div className='w-[95%] h-[60px] flex items-center gap-[20px] shadow-gray-500 bg-white shadow-lg rounded-full hover:bg-[#78cae5] cursor-pointer' onClick={()=>dispatch(setSelectedUser(user))}>
     <div className='relative rounded-full shadow-gray-500 bg-white shadow-lg flex justify-center items-center mt-[10px]'>
     <div className='w-[60px] h-[60px]   rounded-full overflow-hidden flex justify-center items-center '>
     <img src={user.image || dp} alt="" className='h-[100%]'/>
     </div>
+    {showCreateGroup && (
+      <div className='fixed inset-0 bg-black/40 flex items-center justify-center z-[500]' onClick={()=>setShowCreateGroup(false)}>
+        <form className='bg-white rounded-xl p-4 w-[90%] max-w-[420px] flex flex-col gap-3 shadow-lg' onClick={(e)=>e.stopPropagation()} onSubmit={async (e)=>{
+          e.preventDefault()
+          try{
+            const fd = new FormData()
+            fd.append("name", groupName)
+            if(groupImage){ fd.append("image", groupImage) }
+            // for now create group with only creator, you can extend to select members
+            fd.append("members", JSON.stringify([]))
+            const res = await axios.post(`${serverUrl}/api/group/create`, fd, {withCredentials:true})
+            setShowCreateGroup(false)
+            setGroupName("")
+            setGroupImage(null)
+            // refresh groups
+            const list = await axios.get(`${serverUrl}/api/group/list`, {withCredentials:true})
+            dispatch(setGroups(list.data))
+          }catch(err){ console.log(err) }
+        }}>
+          <h3 className='text-lg font-semibold text-gray-800'>Create Group</h3>
+          <input className='border p-2 rounded' placeholder='Group name' value={groupName} onChange={e=>setGroupName(e.target.value)} />
+          <input type='file' ref={groupInput} hidden accept='image/*' onChange={(e)=> setGroupImage(e.target.files[0])} />
+          <button type='button' className='border rounded p-2' onClick={()=>groupInput.current.click()}>Upload Image</button>
+          <div className='flex gap-2 justify-end'>
+            <button type='button' className='px-3 py-1' onClick={()=>setShowCreateGroup(false)}>Cancel</button>
+            <button className='bg-[#20c7ff] text-white px-3 py-1 rounded'>Create</button>
+          </div>
+        </form>
+      </div>
+    )}
     {onlineUsers?.includes(user._id) &&
     <span className='w-[12px] h-[12px] rounded-full absolute bottom-[6px] right-[-1px] bg-[#3aff20] shadow-gray-500 shadow-md'></span>}
     </div>

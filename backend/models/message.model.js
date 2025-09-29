@@ -8,7 +8,12 @@ sender:{
 receiver:{
     type:mongoose.Schema.Types.ObjectId,
     ref:"User",
-    required:true
+    required:false
+},
+group:{
+    type:mongoose.Schema.Types.ObjectId,
+    ref:"Conversation",
+    required:false
 },
 message:{
     type:String,
@@ -17,7 +22,35 @@ message:{
 image:{
     type:String,
     default:""
-}
+},
+video:{
+    type:String,
+    default:""
+},
+audio:{
+    type:String,
+    default:""
+},
+file:{
+    type:String,
+    default:""
+},
+gif:{
+    type:String,
+    default:""
+},
+status:{
+    type:String,
+    default:"sent" // sent | delivered | read
+},
+isDeletedForEveryone:{
+    type:Boolean,
+    default:false
+},
+deletedFor:[{
+    type:mongoose.Schema.Types.ObjectId,
+    ref:"User",
+}]
 
 
 },{timestamps:true})

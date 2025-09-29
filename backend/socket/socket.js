@@ -21,6 +21,21 @@ io.on("connection",(socket)=>{
   }
   io.emit("getOnlineUsers",Object.keys(userSocketMap))
 
+// typing indicators
+socket.on("typing", ({ to }) => {
+  const receiverSocketId = userSocketMap[to]
+  if(receiverSocketId){
+    io.to(receiverSocketId).emit("typing", { from: String(userId) })
+  }
+})
+
+socket.on("stopTyping", ({ to }) => {
+  const receiverSocketId = userSocketMap[to]
+  if(receiverSocketId){
+    io.to(receiverSocketId).emit("stopTyping", { from: String(userId) })
+  }
+})
+
 socket.on("disconnect",()=>{
   delete userSocketMap[userId]  
  io.emit("getOnlineUsers",Object.keys(userSocketMap))
