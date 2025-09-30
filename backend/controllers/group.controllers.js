@@ -45,6 +45,21 @@ export const addMember = async (req, res) => {
         if(!group.partcipants.map(String).includes(String(memberId))){
             group.partcipants.push(memberId)
             await group.save()
+            
+            // Send notification to all group members
+            group.partcipants.forEach(uid => {
+                const idStr = String(uid)
+                const sid = getReceiverSocketId(idStr)
+                if(sid){
+                    io.to(sid).emit("groupNotification", { 
+                        type: "member_added",
+                        groupId,
+                        groupName: group.name,
+                        memberId,
+                        addedBy: userId
+                    })
+                }
+            })
         }
         return res.status(200).json(group)
     }catch(error){
@@ -66,6 +81,22 @@ export const removeMember = async (req, res) => {
         }
         group.partcipants = group.partcipants.filter(id => String(id) !== String(memberId))
         await group.save()
+        
+        // Send notification to remaining group members
+        group.partcipants.forEach(uid => {
+            const idStr = String(uid)
+            const sid = getReceiverSocketId(idStr)
+            if(sid){
+                io.to(sid).emit("groupNotification", { 
+                    type: "member_removed",
+                    groupId,
+                    groupName: group.name,
+                    memberId,
+                    removedBy: userId
+                })
+            }
+        })
+        
         return res.status(200).json(group)
     }catch(error){
         return res.status(500).json({message:`remove member error ${error}`})
@@ -99,7 +130,7 @@ export const sendGroupMessage = async (req, res) => {
     try{
         const sender = req.userId
         const { groupId } = req.params
-        const { message, gif } = req.body
+        const { message, gif, sticker, mentions } = req.body
         const group = await Conversation.findById(groupId)
         if(!group || !group.isGroup){
             return res.status(404).json({message:"Group not found"})
@@ -121,9 +152,33 @@ export const sendGroupMessage = async (req, res) => {
                 fileUrl = uploaded || `/public/${req.file.originalname}`
             }
         }
-        const newMessage = await Message.create({ sender, group: groupId, message, image, video, audio, file:fileUrl, gif, status:"sent" })
+        
+        // Parse mentions if provided
+        let mentionIds = []
+        if(mentions){
+            try {
+                mentionIds = JSON.parse(mentions)
+            } catch(e) {
+                mentionIds = Array.isArray(mentions) ? mentions : []
+            }
+        }
+        
+        const newMessage = await Message.create({ 
+            sender, 
+            group: groupId, 
+            message, 
+            image, 
+            video, 
+            audio, 
+            file:fileUrl, 
+            gif, 
+            sticker,
+            mentions: mentionIds,
+            status:"sent" 
+        })
         group.messages.push(newMessage._id)
         await group.save()
+        
         // emit to all online members except sender
         group.partcipants.forEach(uid => {
             const idStr = String(uid)
@@ -134,6 +189,21 @@ export const sendGroupMessage = async (req, res) => {
                 }
             }
         })
+        
+        // Send special notification to mentioned users
+        if(mentionIds.length > 0){
+            mentionIds.forEach(mentionId => {
+                const sid = getReceiverSocketId(String(mentionId))
+                if(sid){
+                    io.to(sid).emit("mentioned", { 
+                        message: newMessage, 
+                        group: groupId,
+                        groupName: group.name 
+                    })
+                }
+            })
+        }
+        
         return res.status(201).json(newMessage)
     }catch(error){
         return res.status(500).json({message:`send group message error ${error}`})

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import dp from "../assets/dp.webp"
 import { useSelector } from 'react-redux'
 import { RiMore2Fill } from "react-icons/ri"
-function SenderMessage({image,video,audio,file,gif,message,_id,onDeleteForMe,onDeleteForEveryone,isDeletedForEveryone,status,replyTo,reactions,onReact,onReply}) {
+function SenderMessage({image,video,audio,file,gif,sticker,message,_id,onDeleteForMe,onDeleteForEveryone,isDeletedForEveryone,status,replyTo,reactions,onReact,onReply}) {
   let scroll = useRef()
   let {userData}=useSelector(state=>state.user)
   let [open,setOpen]=useState(false)
@@ -26,6 +26,7 @@ function SenderMessage({image,video,audio,file,gif,message,_id,onDeleteForMe,onD
     {!isDeletedForEveryone && video && <video src={video} controls className='w-[220px] rounded-lg' onLoadedData={handleImageScroll}/>} 
     {!isDeletedForEveryone && audio && <audio src={audio} controls className='w-[220px]'/>}
     {!isDeletedForEveryone && gif &&  <img src={gif} alt="gif" className='w-[150px] rounded-lg' onLoad={handleImageScroll}/>}
+    {!isDeletedForEveryone && sticker && <div className='text-4xl'>{sticker}</div>}
     {!isDeletedForEveryone && file && <a href={file} target='_blank' rel='noreferrer' className='underline text-[14px] break-all'>Attachment</a>}
    {!isDeletedForEveryone && message && <span >{message}</span>}
    {isDeletedForEveryone && <span className='italic opacity-70'>Message deleted</span>}

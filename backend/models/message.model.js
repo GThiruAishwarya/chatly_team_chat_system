@@ -39,6 +39,10 @@ gif:{
     type:String,
     default:""
 },
+sticker:{
+    type:String,
+    default:""
+},
 replyTo:{
     type:mongoose.Schema.Types.ObjectId,
     ref:"Message",
@@ -57,6 +61,10 @@ isDeletedForEveryone:{
     default:false
 },
 deletedFor:[{
+    type:mongoose.Schema.Types.ObjectId,
+    ref:"User",
+}],
+mentions:[{
     type:mongoose.Schema.Types.ObjectId,
     ref:"User",
 }]

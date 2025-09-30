@@ -7,6 +7,7 @@ import { RiEmojiStickerLine } from "react-icons/ri";
 import { FaImages } from "react-icons/fa6";
 import { FaPaperclip } from "react-icons/fa";
 import { RiSendPlane2Fill } from "react-icons/ri";
+import { FaMicrophone, FaStop } from "react-icons/fa";
 import EmojiPicker from 'emoji-picker-react';
 import SenderMessage from './SenderMessage';
 import ReceiverMessage from './ReceiverMessage';
@@ -28,11 +29,79 @@ let typingTimeout=useRef(null)
 let [showManage,setShowManage]=useState(false)
 let [gifUrl,setGifUrl]=useState("")
 let [replyTo,setReplyTo]=useState(null)
+let [showStickers,setShowStickers]=useState(false)
+let [isRecording,setIsRecording]=useState(false)
+let [recordingTime,setRecordingTime]=useState(0)
+let mediaRecorder=useRef(null)
+let audioChunks=useRef([])
+let recordingInterval=useRef(null)
 const handleImage=(e)=>{
   let file=e.target.files[0]
   setBackendImage(file)
   setFrontendImage(URL.createObjectURL(file))
+}
+
+const startRecording = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    mediaRecorder.current = new MediaRecorder(stream)
+    audioChunks.current = []
+    
+    mediaRecorder.current.ondataavailable = (event) => {
+      audioChunks.current.push(event.data)
     }
+    
+    mediaRecorder.current.onstop = () => {
+      const audioBlob = new Blob(audioChunks.current, { type: 'audio/wav' })
+      setBackendImage(audioBlob)
+      setFrontendImage(URL.createObjectURL(audioBlob))
+      stream.getTracks().forEach(track => track.stop())
+    }
+    
+    mediaRecorder.current.start()
+    setIsRecording(true)
+    setRecordingTime(0)
+    
+    recordingInterval.current = setInterval(() => {
+      setRecordingTime(prev => prev + 1)
+    }, 1000)
+  } catch (error) {
+    console.error('Error starting recording:', error)
+    alert('Microphone access denied')
+  }
+}
+
+const stopRecording = () => {
+  if (mediaRecorder.current && isRecording) {
+    mediaRecorder.current.stop()
+    setIsRecording(false)
+    clearInterval(recordingInterval.current)
+  }
+}
+
+const formatTime = (seconds) => {
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+const stickers = [
+  '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃',
+  '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙',
+  '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔',
+  '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥',
+  '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧',
+  '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎', '🤓', '🧐',
+  '😕', '😟', '🙁', '☹️', '😮', '😯', '😲', '😳', '🥺', '😦',
+  '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞',
+  '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '😈', '👿',
+  '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖'
+]
+
+const handleStickerClick = (sticker) => {
+  setInput(prev => prev + sticker)
+  setShowStickers(false)
+}
 const handleSendMessage=async (e)=>{
   e.preventDefault()
   if(input.length==0 && backendImage==null){
@@ -42,7 +111,12 @@ const handleSendMessage=async (e)=>{
     let formData=new FormData()
     formData.append("message",input)
     if(backendImage){
-      formData.append("image",backendImage)
+      // Check if it's an audio file
+      if(backendImage.type && backendImage.type.startsWith('audio/')){
+        formData.append("audio",backendImage)
+      } else {
+        formData.append("image",backendImage)
+      }
     }
     if(replyTo){
       formData.append("replyTo", replyTo._id)
@@ -174,10 +248,26 @@ return ()=>{
 
 {showPicker && <div className='absolute bottom-[120px] left-[20px]'><EmojiPicker width={250} height={350} className='shadow-lg z-[100]' onEmojiClick={onEmojiClick}/></div> }
 
+{showStickers && (
+  <div className='absolute bottom-[120px] left-[20px] bg-white rounded-lg shadow-lg p-4 max-w-[300px] max-h-[200px] overflow-y-auto z-[100]'>
+    <div className='grid grid-cols-10 gap-2'>
+      {stickers.map((sticker, index) => (
+        <button
+          key={index}
+          onClick={() => handleStickerClick(sticker)}
+          className='text-2xl hover:bg-gray-100 rounded p-1'
+        >
+          {sticker}
+        </button>
+      ))}
+    </div>
+  </div>
+)}
+
 {messages && messages.map((mess)=>(
   mess.sender==userData._id?
-  <SenderMessage _id={mess._id} image={mess.image} video={mess.video} audio={mess.audio} file={mess.file} gif={mess.gif} message={mess.message} status={mess.status} isDeletedForEveryone={mess.isDeletedForEveryone} onDeleteForMe={handleDeleteForMe} onDeleteForEveryone={handleDeleteForEveryone} replyTo={mess.replyTo} reactions={mess.reactions} onReact={handleReact} onReply={setReplyTo}/>:
-  <ReceiverMessage _id={mess._id} image={mess.image} video={mess.video} audio={mess.audio} file={mess.file} gif={mess.gif} message={mess.message} isDeletedForEveryone={mess.isDeletedForEveryone} onDeleteForMe={handleDeleteForMe} replyTo={mess.replyTo} reactions={mess.reactions} onReact={handleReact} onReply={setReplyTo}/>
+  <SenderMessage _id={mess._id} image={mess.image} video={mess.video} audio={mess.audio} file={mess.file} gif={mess.gif} sticker={mess.sticker} message={mess.message} status={mess.status} isDeletedForEveryone={mess.isDeletedForEveryone} onDeleteForMe={handleDeleteForMe} onDeleteForEveryone={handleDeleteForEveryone} replyTo={mess.replyTo} reactions={mess.reactions} onReact={handleReact} onReply={setReplyTo}/>:
+  <ReceiverMessage _id={mess._id} image={mess.image} video={mess.video} audio={mess.audio} file={mess.file} gif={mess.gif} sticker={mess.sticker} message={mess.message} isDeletedForEveryone={mess.isDeletedForEveryone} onDeleteForMe={handleDeleteForMe} replyTo={mess.replyTo} reactions={mess.reactions} onReact={handleReact} onReply={setReplyTo}/>
 ))}
  
 
@@ -190,6 +280,9 @@ return ()=>{
       
        <div onClick={()=>setShowPicker(prev=>!prev)}>
        <RiEmojiStickerLine  className='w-[25px] h-[25px] text-white cursor-pointer'/>
+       </div>
+       <div onClick={()=>setShowStickers(prev=>!prev)}>
+       <span className='text-white text-[20px] cursor-pointer'>😀</span>
        </div>
        <input type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.zip" ref={image} hidden onChange={handleImage}/>
        <input type="text" className='w-full h-full px-[10px] outline-none border-0 text-[19px] text-white bg-transparent placeholder-white' placeholder='Message' onChange={(e)=>{
@@ -207,6 +300,23 @@ return ()=>{
 <div onClick={()=>image.current.click()}>
 <FaImages className='w-[25px] h-[25px] cursor-pointer text-white'/>
 </div>
+
+{/* Voice Recording Button */}
+<div className='flex items-center gap-2'>
+  {!isRecording ? (
+    <div onClick={startRecording} className='cursor-pointer'>
+      <FaMicrophone className='w-[25px] h-[25px] text-white'/>
+    </div>
+  ) : (
+    <div className='flex items-center gap-2'>
+      <div onClick={stopRecording} className='cursor-pointer'>
+        <FaStop className='w-[25px] h-[25px] text-red-400'/>
+      </div>
+      <span className='text-white text-[14px]'>{formatTime(recordingTime)}</span>
+    </div>
+  )}
+</div>
+
 {selectedGroup && (
   <input value={gifUrl} onChange={(e)=>setGifUrl(e.target.value)} placeholder='GIF url (optional)' className='text-white placeholder-white/70 bg-transparent border-b border-white/40 outline-none text-[14px] w-[180px]' />
 )}

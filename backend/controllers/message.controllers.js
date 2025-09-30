@@ -7,7 +7,7 @@ export const sendMessage=async (req,res)=>{
     try {
         let sender=req.userId
         let {receiver}=req.params
-        let {message, gif, replyTo} = req.body
+        let {message, gif, sticker, replyTo} = req.body
 
         let image, video, audio, fileUrl
         if(req.file){
@@ -29,7 +29,7 @@ export const sendMessage=async (req,res)=>{
         })
 
         let newMessage=await Message.create({
-            sender,receiver,message,image,video,audio,file:fileUrl,gif,replyTo,status:"sent"
+            sender,receiver,message,image,video,audio,file:fileUrl,gif,sticker,replyTo,status:"sent"
         })
 
         if(!conversation){
@@ -75,6 +75,64 @@ export const reactToMessage = async (req, res) => {
         return res.status(200).json(message)
     } catch (error) {
         return res.status(500).json({message:`react error ${error}`})
+    }
+}
+
+export const getLastMessages = async (req, res) => {
+    try {
+        const userId = req.userId
+        
+        // Get personal conversations
+        const personalConversations = await Conversation.find({
+            isGroup: false,
+            partcipants: { $in: [userId] }
+        }).populate({
+            path: 'messages',
+            options: { sort: { createdAt: -1 }, limit: 1 },
+            populate: { path: 'sender', select: 'userName name' }
+        })
+        
+        // Get group conversations
+        const groupConversations = await Conversation.find({
+            isGroup: true,
+            partcipants: { $in: [userId] }
+        }).populate({
+            path: 'messages',
+            options: { sort: { createdAt: -1 }, limit: 1 },
+            populate: { path: 'sender', select: 'userName name' }
+        })
+        
+        const allConversations = [...personalConversations, ...groupConversations]
+        
+        // Format the response
+        const conversationsWithLastMessage = allConversations.map(conv => {
+            const lastMessage = conv.messages[0]
+            const otherParticipant = conv.partcipants.find(p => String(p) !== String(userId))
+            
+            return {
+                _id: conv._id,
+                isGroup: conv.isGroup,
+                name: conv.isGroup ? conv.name : (lastMessage?.sender?.name || lastMessage?.sender?.userName || 'Unknown'),
+                image: conv.image || '',
+                lastMessage: lastMessage ? {
+                    message: lastMessage.message || (lastMessage.image ? '📷 Image' : lastMessage.video ? '🎥 Video' : lastMessage.audio ? '🎵 Audio' : '📎 File'),
+                    timestamp: lastMessage.createdAt,
+                    sender: lastMessage.sender?.name || lastMessage.sender?.userName || 'Unknown'
+                } : null,
+                participants: conv.partcipants
+            }
+        })
+        
+        // Sort by last message timestamp
+        conversationsWithLastMessage.sort((a, b) => {
+            if (!a.lastMessage) return 1
+            if (!b.lastMessage) return -1
+            return new Date(b.lastMessage.timestamp) - new Date(a.lastMessage.timestamp)
+        })
+        
+        return res.status(200).json(conversationsWithLastMessage)
+    } catch (error) {
+        return res.status(500).json({message:`get last messages error ${error}`})
     }
 }
 

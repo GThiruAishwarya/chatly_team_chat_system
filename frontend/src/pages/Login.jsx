@@ -31,7 +31,7 @@ function Login() {
             } catch (error) {
                 console.log(error)
                 setLoading(false)
-                setErr(error.response.data.message)
+                setErr(error.response?.data?.message || "Login failed. Please try again.")
             }
         }
     

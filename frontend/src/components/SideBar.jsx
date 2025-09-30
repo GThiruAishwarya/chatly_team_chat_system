@@ -16,6 +16,7 @@ function SideBar() {
     let groupInput=React.useRef()
     let [search,setSearch]=useState(false)
     let [input,setInput]=useState("")
+    let [conversations,setConversations]=useState([])
 let dispatch=useDispatch()
 let navigate=useNavigate()
     const handleLogOut=async ()=>{
@@ -46,6 +47,31 @@ console.log(error)
         }
 
     },[input])
+
+    // Load conversations with last messages
+    useEffect(() => {
+        const loadConversations = async () => {
+            if(!userData) return
+            try {
+                const res = await axios.get(`${serverUrl}/api/message/last-messages`, {withCredentials:true})
+                setConversations(res.data)
+            } catch(e) {
+                console.log(e)
+            }
+        }
+        loadConversations()
+    }, [userData])
+
+    const formatTime = (timestamp) => {
+        const date = new Date(timestamp)
+        const now = new Date()
+        const diff = now - date
+        
+        if (diff < 60000) return 'now'
+        if (diff < 3600000) return `${Math.floor(diff / 60000)}m`
+        if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`
+        return date.toLocaleDateString()
+    }
   return (
     <div className={`lg:w-[30%] w-full h-full overflow-hidden lg:block bg-slate-200  relative ${!selectedUser?"block":"hidden"}`}>
         <div className='w-[60px] h-[60px] mt-[10px] rounded-full overflow-hidden flex justify-center items-center bg-[#20c7ff] shadow-gray-500 text-gray-700 cursor-pointer shadow-lg fixed bottom-[20px] left-[10px]' onClick={handleLogOut}>
@@ -107,15 +133,46 @@ console.log(error)
 
       <div className='w-full h-[50%] overflow-auto flex flex-col gap-[20px] items-center mt-[20px]'>
       <div className='w-[95%] flex justify-between items-center'>
-        <h2 className='text-gray-700 font-semibold'>Groups</h2>
+        <h2 className='text-gray-700 font-semibold'>Conversations</h2>
         <button className='text-sm bg-[#20c7ff] text-white px-3 py-1 rounded-full shadow' onClick={()=>setShowCreateGroup(true)}>New Group</button>
       </div>
-      {groups?.map(g=> (
-        <div className='w-[95%] h-[60px] flex items-center gap-[20px] shadow-gray-500 bg-white shadow-lg rounded-full hover:bg-[#78cae5] cursor-pointer' onClick={()=>{dispatch(setSelectedGroup(g)); dispatch(setSelectedUser(null))}}>
-          <div className='w-[60px] h-[60px]   rounded-full overflow-hidden flex justify-center items-center '>
-            <img src={g.image || dp} alt="" className='h-[100%]' />
+      
+      {/* Conversations with last message preview */}
+      {conversations?.map(conv=> (
+        <div 
+          key={conv._id}
+          className='w-[95%] h-[70px] flex items-center gap-[20px] shadow-gray-500 bg-white shadow-lg rounded-full hover:bg-[#78cae5] cursor-pointer p-2' 
+          onClick={()=>{
+            if(conv.isGroup) {
+              dispatch(setSelectedGroup(conv)); 
+              dispatch(setSelectedUser(null))
+            } else {
+              // Find the other participant for personal chat
+              const otherUser = otherUsers?.find(u => conv.participants.includes(u._id))
+              if(otherUser) {
+                dispatch(setSelectedUser(otherUser))
+                dispatch(setSelectedGroup(null))
+              }
+            }
+          }}
+        >
+          <div className='w-[50px] h-[50px] rounded-full overflow-hidden flex justify-center items-center'>
+            <img src={conv.image || dp} alt="" className='h-[100%]' />
           </div>
-          <h1 className='text-gray-800 font-semibold text-[20px]'>{g.name}</h1>
+          <div className='flex-1 min-w-0'>
+            <div className='flex justify-between items-center'>
+              <h1 className='text-gray-800 font-semibold text-[16px] truncate'>{conv.name}</h1>
+              {conv.lastMessage && (
+                <span className='text-[12px] text-gray-500'>{formatTime(conv.lastMessage.timestamp)}</span>
+              )}
+            </div>
+            {conv.lastMessage && (
+              <p className='text-[14px] text-gray-600 truncate'>
+                {conv.isGroup && conv.lastMessage.sender !== userData?.userName ? `${conv.lastMessage.sender}: ` : ''}
+                {conv.lastMessage.message}
+              </p>
+            )}
+          </div>
         </div>
       ))}
 {otherUsers?.map((user)=>(
