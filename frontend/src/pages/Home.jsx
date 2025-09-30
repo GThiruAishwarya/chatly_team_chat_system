@@ -9,7 +9,7 @@ import { setGroups } from '../redux/userSlice'
 
 
 function Home() {
-  let {selectedUser,userData}=useSelector(state=>state.user)
+  let {selectedUser,userData,socket}=useSelector(state=>state.user)
   const dispatch = useDispatch()
  getMessage()
   React.useEffect(()=>{
@@ -24,6 +24,22 @@ function Home() {
     }
     loadGroups()
   },[userData])
+
+  React.useEffect(()=>{
+    if(!socket || !userData) return
+    const onGroupCreated = async (group)=>{
+      try{
+        const res = await axios.get(`${serverUrl}/api/group/list`, {withCredentials:true})
+        dispatch(setGroups(res.data))
+      }catch(err){
+        console.log(err)
+      }
+    }
+    socket.on('groupCreated', onGroupCreated)
+    return ()=>{
+      socket.off('groupCreated', onGroupCreated)
+    }
+  },[socket,userData])
   return (
     <div className='w-full h-[100vh] flex  '>
      <SideBar/>

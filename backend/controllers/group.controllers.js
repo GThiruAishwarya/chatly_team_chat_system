@@ -24,6 +24,15 @@ export const createGroup = async (req, res) => {
             partcipants: uniqueMembers,
             messages:[]
         })
+        // notify all online members that a new group has been created
+        try{
+            uniqueMembers.forEach(uid => {
+                const sid = getReceiverSocketId(String(uid))
+                if(sid){
+                    io.to(sid).emit("groupCreated", group)
+                }
+            })
+        }catch(_e){}
         return res.status(201).json(group)
     }catch(error){
         return res.status(500).json({message:`create group error ${error}`})

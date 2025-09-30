@@ -8,9 +8,11 @@ import { serverUrl } from '../main';
 import axios from 'axios';
 import { setOtherUsers, setSearchData, setSelectedGroup, setSelectedUser, setUserData } from '../redux/userSlice';
 import { useNavigate } from 'react-router-dom';
+import CreateGroupModal from './CreateGroupModal';
 function SideBar() {
     let {userData,otherUsers,selectedUser,selectedGroup,onlineUsers,searchData,groups} = useSelector(state=>state.user)
     let [showCreateGroup,setShowCreateGroup]=useState(false)
+    let [activeTab,setActiveTab]=useState('chats') // chats | groups | settings
     let [groupName,setGroupName]=useState("")
     let [groupImage,setGroupImage]=useState(null)
     let groupInput=React.useRef()
@@ -73,13 +75,13 @@ console.log(error)
         return date.toLocaleDateString()
     }
   return (
-    <div className={`lg:w-[30%] w-full h-full overflow-hidden lg:block bg-slate-200 relative ${!selectedUser?"block":"hidden"} fade-in`}>
+    <div className={`lg:w-[30%] w-full h-full overflow-hidden lg:block bg-slate-100 relative ${!selectedUser?"block":"hidden"} fade-in`}>
         <div className='w-[60px] h-[60px] mt-[10px] rounded-full overflow-hidden flex justify-center items-center bg-[#20c7ff] shadow-gray-500 text-gray-700 cursor-pointer shadow-lg fixed bottom-[20px] left-[10px] hover-scale' onClick={handleLogOut}>
    <BiLogOutCircle className='w-[25px] h-[25px]'/>
 </div>
 {input.length>0 && <div className='flex absolute top-[250px] bg-[white] w-full h-[500px] overflow-y-auto items-center pt-[20px] flex-col gap-[10px] z-[150] shadow-lg'>
 {searchData?.map((user)=>(
-     <div className='w-[95%] h-[70px] flex items-center gap-[20px]  px-[10px] hover:bg-[#78cae5] border-b-2 border-gray-400 cursor-pointer' onClick={()=>{
+     <div className='w-[95%] h-[70px] flex items-center gap-[20px]  px-[10px] hover:bg-violet-100 border-b-2 border-gray-200 cursor-pointer' onClick={()=>{
         dispatch(setSelectedUser(user))
         setInput("")
         setSearch(false)
@@ -97,7 +99,7 @@ console.log(error)
 ))}
         </div> }
 
-      <div className='w-full h-[300px] bg-gradient-to-br from-[#20c7ff] to-[#1797c2] rounded-b-[30%] shadow-gray-400 shadow-lg flex flex-col justify-center px-[20px] slide-down'>
+      <div className='w-full h-[300px] bg-gradient-to-br from-violet-600 to-fuchsia-500 rounded-b-[30%] shadow-gray-400 shadow-lg flex flex-col justify-center px-[20px] slide-down'>
     <h1 className='text-white font-extrabold text-[28px] tracking-wide'>chatly</h1>
    <div className='w-full flex justify-between items-center'>
     <h1 className='text-gray-800 font-bold text-[25px]'>Hii , {userData.name || "user"}</h1>
@@ -128,96 +130,111 @@ console.log(error)
     </div>
 ))}
  
-   </div>
+      </div>
+      {/* Tabs */}
+      <div className='px-[16px] mt-3'>
+        <div className='bg-white/70 rounded-full p-1 flex gap-1 shadow-md'>
+          <button className={`flex-1 text-sm px-3 py-2 rounded-full ${activeTab==='chats'?'bg-white text-[#1797c2] font-semibold':'text-gray-600'}`} onClick={()=>setActiveTab('chats')}>Chats</button>
+          <button className={`flex-1 text-sm px-3 py-2 rounded-full ${activeTab==='groups'?'bg-white text-[#1797c2] font-semibold':'text-gray-600'}`} onClick={()=>setActiveTab('groups')}>Groups</button>
+          <button className={`flex-1 text-sm px-3 py-2 rounded-full ${activeTab==='settings'?'bg-white text-[#1797c2] font-semibold':'text-gray-600'}`} onClick={()=>setActiveTab('settings')}>Settings</button>
+        </div>
+      </div>
       </div>
 
-      <div className='w-full h-[50%] overflow-auto flex flex-col gap-[20px] items-center mt-[20px]'>
-      <div className='w-[95%] flex justify-between items-center slide-down'>
-        <h2 className='text-gray-700 font-semibold'>Conversations</h2>
-        <button className='text-sm bg-[#20c7ff] text-white px-3 py-1 rounded-full shadow' onClick={()=>setShowCreateGroup(true)}>New Group</button>
-      </div>
-      
-      {/* Conversations with last message preview */}
-      {conversations?.map(conv=> (
-        <div 
-          key={conv._id}
-          className='w-[95%] h-[70px] flex items-center gap-[20px] shadow-gray-500 bg-white shadow-lg rounded-full hover:bg-[#78cae5] cursor-pointer p-2 fade-in'
-          onClick={()=>{
-            if(conv.isGroup) {
-              dispatch(setSelectedGroup(conv)); 
-              dispatch(setSelectedUser(null))
-            } else {
-              // Find the other participant for personal chat
-              const otherUser = otherUsers?.find(u => conv.participants.includes(u._id))
-              if(otherUser) {
-                dispatch(setSelectedUser(otherUser))
-                dispatch(setSelectedGroup(null))
-              }
-            }
-          }}
-        >
-          <div className='w-[50px] h-[50px] rounded-full overflow-hidden flex justify-center items-center hover-scale'>
-            <img src={conv.image || dp} alt="" className='h-[100%]' />
-          </div>
-          <div className='flex-1 min-w-0'>
-            <div className='flex justify-between items-center'>
-              <h1 className='text-gray-800 font-semibold text-[16px] truncate'>{conv.name}</h1>
-              {conv.lastMessage && (
-                <span className='text-[12px] text-gray-500'>{formatTime(conv.lastMessage.timestamp)}</span>
-              )}
+      <div className='w-full h-[50%] overflow-auto flex flex-col gap-[12px] items-center mt-[16px]'>
+        {activeTab==='chats' && (
+          <>
+            <div className='w-[95%] flex justify-between items-center slide-down'>
+              <h2 className='text-gray-700 font-semibold'>Conversations</h2>
             </div>
-            {conv.lastMessage && (
-              <p className='text-[14px] text-gray-600 truncate'>
-                {conv.isGroup && conv.lastMessage.sender !== userData?.userName ? `${conv.lastMessage.sender}: ` : ''}
-                {conv.lastMessage.message}
-              </p>
+            {conversations?.map(conv=> (
+              <div 
+                key={conv._id}
+                className='w-[95%] h-[70px] flex items-center gap-[20px] shadow-gray-500 bg-white shadow-lg rounded-full hover:bg-violet-100 cursor-pointer p-2 fade-in'
+                onClick={()=>{
+                  if(conv.isGroup) {
+                    dispatch(setSelectedGroup(conv)); 
+                    dispatch(setSelectedUser(null))
+                  } else {
+                    const otherUser = otherUsers?.find(u => conv.participants.includes(u._id))
+                    if(otherUser) {
+                      dispatch(setSelectedUser(otherUser))
+                      dispatch(setSelectedGroup(null))
+                    }
+                  }
+                }}
+              >
+                <div className='w-[50px] h-[50px] rounded-full overflow-hidden flex justify-center items-center hover-scale'>
+                  <img src={conv.image || dp} alt="" className='h-[100%]' />
+                </div>
+                <div className='flex-1 min-w-0'>
+                  <div className='flex justify-between items-center'>
+                    <h1 className='text-gray-800 font-semibold text-[16px] truncate'>{conv.name}</h1>
+                    {conv.lastMessage && (
+                      <span className='text-[12px] text-gray-500'>{formatTime(conv.lastMessage.timestamp)}</span>
+                    )}
+                  </div>
+                  {conv.lastMessage && (
+                    <p className='text-[14px] text-gray-600 truncate'>
+                      {conv.isGroup && conv.lastMessage.sender !== userData?.userName ? `${conv.lastMessage.sender}: ` : ''}
+                      {conv.lastMessage.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+            {otherUsers?.map((user)=>(
+              <div className='w-[95%] h-[60px] flex items-center gap-[20px] shadow-gray-500 bg-white shadow-lg rounded-full hover:bg-violet-100 cursor-pointer' onClick={()=>dispatch(setSelectedUser(user))}>
+                <div className='relative rounded-full shadow-gray-500 bg-white shadow-lg flex justify-center items-center mt-[10px]'>
+                  <div className='w-[60px] h-[60px]   rounded-full overflow-hidden flex justify-center items-center '>
+                    <img src={user.image || dp} alt="" className='h-[100%]'/>
+                  </div>
+                  {onlineUsers?.includes(user._id) &&
+                    <span className='w-[12px] h-[12px] rounded-full absolute bottom-[6px] right-[-1px] bg-[#3aff20] shadow-gray-500 shadow-md'></span>}
+                </div>
+                <h1 className='text-gray-800 font-semibold text-[20px]'>{user.name || user.userName}</h1>
+              </div>
+            ))}
+          </>
+        )}
+        {activeTab==='groups' && (
+          <>
+            <div className='w-[95%] flex justify-between items-center slide-down'>
+              <h2 className='text-gray-700 font-semibold'>Groups</h2>
+              <button className='text-sm bg-violet-600 text-white px-3 py-1 rounded-full shadow' onClick={()=>setShowCreateGroup(true)}>New Group</button>
+            </div>
+            {(groups||[])?.map(g=> (
+              <div 
+                key={g._id}
+                className='w-[95%] h-[70px] flex items-center gap-[20px] shadow-gray-500 bg-white shadow-lg rounded-full hover:bg-violet-100 cursor-pointer p-2 fade-in'
+                onClick={()=>{dispatch(setSelectedGroup(g)); dispatch(setSelectedUser(null))}}
+              >
+                <div className='w-[50px] h-[50px] rounded-full overflow-hidden flex justify-center items-center hover-scale'>
+                  <img src={g.image || dp} alt="" className='h-[100%]' />
+                </div>
+                <div className='flex-1 min-w-0'>
+                  <div className='flex justify-between items-center'>
+                    <h1 className='text-gray-800 font-semibold text-[16px] truncate'>{g.name}</h1>
+                  </div>
+                  <p className='text-[13px] text-gray-600 truncate'>Members: {g.partcipants?.length || 0}</p>
+                </div>
+              </div>
+            ))}
+            {!groups?.length && (
+              <div className='w-[95%] text-gray-600 text-sm'>You have no groups yet.</div>
             )}
+          </>
+        )}
+        {activeTab==='settings' && (
+          <div className='w-[95%] bg-white rounded-xl p-4 shadow fade-in'>
+            <h3 className='text-gray-800 font-semibold mb-2'>Settings</h3>
+            <div className='text-sm text-gray-600'>
+              <button className='px-3 py-2 bg-violet-600 text-white rounded-lg shadow' onClick={()=>navigate('/profile')}>Open Profile</button>
+            </div>
           </div>
-        </div>
-      ))}
-{otherUsers?.map((user)=>(
-    <div className='w-[95%] h-[60px] flex items-center gap-[20px] shadow-gray-500 bg-white shadow-lg rounded-full hover:bg-[#78cae5] cursor-pointer' onClick={()=>dispatch(setSelectedUser(user))}>
-    <div className='relative rounded-full shadow-gray-500 bg-white shadow-lg flex justify-center items-center mt-[10px]'>
-    <div className='w-[60px] h-[60px]   rounded-full overflow-hidden flex justify-center items-center '>
-    <img src={user.image || dp} alt="" className='h-[100%]'/>
-    </div>
-    {showCreateGroup && (
-      <div className='fixed inset-0 bg-black/40 flex items-center justify-center z-[500]' onClick={()=>setShowCreateGroup(false)}>
-        <form className='bg-white rounded-xl p-4 w-[90%] max-w-[420px] flex flex-col gap-3 shadow-lg' onClick={(e)=>e.stopPropagation()} onSubmit={async (e)=>{
-          e.preventDefault()
-          try{
-            const fd = new FormData()
-            fd.append("name", groupName)
-            if(groupImage){ fd.append("image", groupImage) }
-            // for now create group with only creator, you can extend to select members
-            fd.append("members", JSON.stringify([]))
-            const res = await axios.post(`${serverUrl}/api/group/create`, fd, {withCredentials:true})
-            setShowCreateGroup(false)
-            setGroupName("")
-            setGroupImage(null)
-            // refresh groups
-            const list = await axios.get(`${serverUrl}/api/group/list`, {withCredentials:true})
-            dispatch(setGroups(list.data))
-          }catch(err){ console.log(err) }
-        }}>
-          <h3 className='text-lg font-semibold text-gray-800'>Create Group</h3>
-          <input className='border p-2 rounded' placeholder='Group name' value={groupName} onChange={e=>setGroupName(e.target.value)} />
-          <input type='file' ref={groupInput} hidden accept='image/*' onChange={(e)=> setGroupImage(e.target.files[0])} />
-          <button type='button' className='border rounded p-2' onClick={()=>groupInput.current.click()}>Upload Image</button>
-          <div className='flex gap-2 justify-end'>
-            <button type='button' className='px-3 py-1' onClick={()=>setShowCreateGroup(false)}>Cancel</button>
-            <button className='bg-[#20c7ff] text-white px-3 py-1 rounded'>Create</button>
-          </div>
-        </form>
+        )}
       </div>
-    )}
-    {onlineUsers?.includes(user._id) &&
-    <span className='w-[12px] h-[12px] rounded-full absolute bottom-[6px] right-[-1px] bg-[#3aff20] shadow-gray-500 shadow-md'></span>}
-    </div>
-    <h1 className='text-gray-800 font-semibold text-[20px]'>{user.name || user.userName}</h1>
-    </div>
-))}
-      </div>
+    <CreateGroupModal open={showCreateGroup} onClose={()=>setShowCreateGroup(false)} />
     </div>
   )
 }

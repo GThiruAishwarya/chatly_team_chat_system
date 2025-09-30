@@ -35,6 +35,7 @@ let [recordingTime,setRecordingTime]=useState(0)
 let mediaRecorder=useRef(null)
 let audioChunks=useRef([])
 let recordingInterval=useRef(null)
+let [groupNotice,setGroupNotice]=useState("")
 const handleImage=(e)=>{
   let file=e.target.files[0]
   setBackendImage(file)
@@ -132,6 +133,18 @@ const handleSendMessage=async (e)=>{
       if(gifUrl){
         formData.append("gif", gifUrl)
       }
+      // Mentions: parse @username from input and map to participant ids
+      try{
+        const mentionUsernames = Array.from(new Set((input.match(/@([A-Za-z0-9_]+)/g)||[]).map(s=>s.slice(1))))
+        if(mentionUsernames.length>0){
+          const participants = (otherUsers||[]).filter(u=> selectedGroup?.partcipants?.includes(u._id))
+          const ids = participants.filter(u=> mentionUsernames.includes(u.userName) || mentionUsernames.includes((u.name||'').split(' ')[0]))
+                                  .map(u=>u._id)
+          if(ids.length>0){
+            formData.append('mentions', JSON.stringify(ids))
+          }
+        }
+      }catch(_e){}
       result=await axios.post(`${serverUrl}/api/group/send/${selectedGroup._id}`,formData,{withCredentials:true})
     }
     dispatch(setMessages([...messages,result.data]))
@@ -204,6 +217,13 @@ socket?.on("stopTyping", ({from})=>{
     setIsTyping(false)
   }
 })
+socket?.on("groupNotification", (payload)=>{
+  if(selectedGroup && String(payload.groupId)===String(selectedGroup._id)){
+    const text = payload.type==="member_added" ? `Member joined` : payload.type==="member_removed" ? `Member removed` : "Group update"
+    setGroupNotice(`${text}: ${payload.memberId}`)
+    setTimeout(()=> setGroupNotice(""), 4000)
+  }
+})
 return ()=>{
   socket?.off("newMessage")
   socket?.off("messageDeleted")
@@ -211,6 +231,7 @@ return ()=>{
   socket?.off("typing")
   socket?.off("stopTyping")
   socket?.off("newGroupMessage")
+  socket?.off("groupNotification")
 }
 },[messages,setMessages,selectedGroup])
  
@@ -219,7 +240,7 @@ return ()=>{
       
 {(selectedUser || selectedGroup) && 
 <div className='w-full h-[100vh] flex flex-col overflow-hidden gap-[20px] items-center'>
-<div className='w-full h-[100px] bg-gradient-to-r from-[#1797c2] to-[#20c7ff] rounded-b-[30px] shadow-gray-400 shadow-lg gap-[20px] flex items-center px-[20px] slide-down'>
+<div className='w-full h-[100px] bg-gradient-to-r from-violet-600 to-fuchsia-500 rounded-b-[30px] shadow-gray-400 shadow-lg gap-[20px] flex items-center px-[20px] slide-down'>
             <div className='cursor-pointer' onClick={()=>{dispatch(setSelectedUser(null)); dispatch(setSelectedGroup(null))}}>
                   <IoIosArrowRoundBack className='w-[40px] h-[40px] text-white'/>
            </div>
@@ -228,9 +249,15 @@ return ()=>{
        </div>
        <div className='flex flex-col'>
          <h1 className='text-white font-semibold text-[20px]'>{selectedUser?.name || selectedGroup?.name || "user"}</h1>
-         {selectedUser && (isTyping ? <span className='text-white text-[12px] opacity-80'>typing...</span> : (
-           <span className='text-white text-[12px] opacity-80'>{onlineUsers?.includes(selectedUser._id)?"Online":"Offline"}</span>
-         ))}
+         {selectedUser && (
+           isTyping ? (
+             <span className='text-white text-[12px] opacity-80'>{(selectedUser.name || selectedUser.userName) + ' is typing…'}</span>
+           ) : (
+             <span className='text-white text-[12px] opacity-80'>
+               {onlineUsers?.includes(selectedUser._id)?"Online": (selectedUser?.lastSeen ? `last seen ${new Date(selectedUser.lastSeen).toLocaleString([], {hour:'2-digit', minute:'2-digit'})}` : 'Offline')}
+             </span>
+           )
+         )}
        </div>
         {selectedGroup && selectedGroup.admins?.includes(userData?._id) && (
         <button className='ml-auto text-sm bg-white/20 text-white px-3 py-1 rounded-full' onClick={()=>setShowManage(true)}>Manage</button>
@@ -242,6 +269,10 @@ return ()=>{
         <div className='truncate'>{replyTo.message || "Media message"}</div>
         <button className='text-red-400 text-[12px]' onClick={()=>setReplyTo(null)}>Cancel</button>
       </div>
+    )}
+
+    {groupNotice && (
+      <div className='mx-4 -mt-1 text-[12px] text-white/90'>{groupNotice}</div>
     )}
 
     <div className='w-full h-[70%] flex flex-col py-[30px]  px-[20px] overflow-auto gap-[20px] fade-in-slow '>
@@ -266,8 +297,8 @@ return ()=>{
 
 {messages && messages.map((mess)=>(
   mess.sender==userData._id?
-  <SenderMessage _id={mess._id} image={mess.image} video={mess.video} audio={mess.audio} file={mess.file} gif={mess.gif} sticker={mess.sticker} message={mess.message} status={mess.status} isDeletedForEveryone={mess.isDeletedForEveryone} onDeleteForMe={handleDeleteForMe} onDeleteForEveryone={handleDeleteForEveryone} replyTo={mess.replyTo} reactions={mess.reactions} onReact={handleReact} onReply={setReplyTo}/>:
-  <ReceiverMessage _id={mess._id} image={mess.image} video={mess.video} audio={mess.audio} file={mess.file} gif={mess.gif} sticker={mess.sticker} message={mess.message} isDeletedForEveryone={mess.isDeletedForEveryone} onDeleteForMe={handleDeleteForMe} replyTo={mess.replyTo} reactions={mess.reactions} onReact={handleReact} onReply={setReplyTo}/>
+  <SenderMessage _id={mess._id} image={mess.image} video={mess.video} audio={mess.audio} file={mess.file} gif={mess.gif} sticker={mess.sticker} message={mess.message} status={mess.status} isDeletedForEveryone={mess.isDeletedForEveryone} onDeleteForMe={handleDeleteForMe} onDeleteForEveryone={handleDeleteForEveryone} replyTo={mess.replyTo} reactions={mess.reactions} onReact={handleReact} onReply={setReplyTo} createdAt={mess.createdAt}/>:
+  <ReceiverMessage _id={mess._id} image={mess.image} video={mess.video} audio={mess.audio} file={mess.file} gif={mess.gif} sticker={mess.sticker} message={mess.message} isDeletedForEveryone={mess.isDeletedForEveryone} onDeleteForMe={handleDeleteForMe} replyTo={mess.replyTo} reactions={mess.reactions} onReact={handleReact} onReply={setReplyTo} createdAt={mess.createdAt}/>
 ))}
  
 
@@ -276,7 +307,7 @@ return ()=>{
     }
 {(selectedUser || selectedGroup) && <div className='w-full lg:w-[70%] h-[100px] fixed bottom-[20px] flex items-center justify-center slide-up '>
       <img src={frontendImage} alt="" className='w-[80px] absolute bottom-[100px] right-[20%] rounded-lg shadow-gray-400 shadow-lg'/>
-     <form className='w-[95%] lg:w-[70%] h-[60px] bg-[rgb(23,151,194)] shadow-gray-400 shadow-lg rounded-full flex items-center gap-[20px] px-[20px] relative pop-in' onSubmit={handleSendMessage}>
+     <form className='w-[95%] lg:w-[70%] h-[60px] bg-violet-600 shadow-gray-400 shadow-lg rounded-full flex items-center gap-[20px] px-[20px] relative pop-in' onSubmit={handleSendMessage}>
       
        <div onClick={()=>setShowPicker(prev=>!prev)}>
        <RiEmojiStickerLine  className='w-[25px] h-[25px] text-white cursor-pointer'/>

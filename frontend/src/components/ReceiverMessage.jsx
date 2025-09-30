@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import dp from "../assets/dp.webp"
 import { useSelector } from 'react-redux'
 import { RiMore2Fill } from "react-icons/ri"
-function ReceiverMessage({image,video,audio,file,gif,sticker,message,_id,onDeleteForMe,isDeletedForEveryone,replyTo,reactions,onReact,onReply}) {
+function ReceiverMessage({image,video,audio,file,gif,sticker,message,_id,onDeleteForMe,isDeletedForEveryone,replyTo,reactions,onReact,onReply,createdAt}) {
   let scroll=useRef()
   let {selectedUser}=useSelector(state=>state.user)
   let [open,setOpen]=useState(false)
@@ -12,6 +12,11 @@ function ReceiverMessage({image,video,audio,file,gif,sticker,message,_id,onDelet
   
   const handleImageScroll=()=>{
     scroll?.current.scrollIntoView({behavior:"smooth"})
+  }
+  const formatTime = (ts)=>{
+    if(!ts) return "";
+    const d = new Date(ts)
+    return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
   }
   return (
     <div className='flex items-start gap-[10px] fade-in' >
@@ -32,6 +37,11 @@ function ReceiverMessage({image,video,audio,file,gif,sticker,message,_id,onDelet
         {!isDeletedForEveryone && sticker && <div className='text-4xl'>{sticker}</div>}
         {!isDeletedForEveryone && file && <a href={file} target='_blank' rel='noreferrer' className='underline text-[14px] break-all'>Attachment</a>}
        {!isDeletedForEveryone && message && <span >{message}</span>}
+       {!isDeletedForEveryone && (
+         <div className='text-[11px] opacity-90 self-end'>
+           {formatTime(createdAt)}
+         </div>
+       )}
        {isDeletedForEveryone && <span className='italic opacity-70'>Message deleted</span>}
        {reactions && reactions.length > 0 && (
          <div className='flex gap-1 flex-wrap'>
@@ -43,7 +53,11 @@ function ReceiverMessage({image,video,audio,file,gif,sticker,message,_id,onDelet
       <div className='absolute -top-2 -right-8'>
         <RiMore2Fill className='text-gray-600 cursor-pointer hover-scale' onClick={()=>setOpen(prev=>!prev)} />
         {open && (
-         <div className='bg-white text-gray-800 rounded shadow-md text-[14px] pop-in'>
+         <div className='bg-white text-gray-800 rounded shadow-md text-[14px] pop-in min-w-[180px]'>
+            <div className='px-3 py-2 text-[12px] text-gray-600 border-b'>
+              <div>{formatTime(createdAt)}</div>
+              <div className='capitalize'>received</div>
+            </div>
             <button className='px-3 py-2 hover:bg-gray-100 w-full text-left' onClick={()=>{setOpen(false); onReply?.({_id, message, image, video, audio, file, gif})}}>Reply</button>
             <button className='px-3 py-2 hover:bg-gray-100 w-full text-left' onClick={()=>{setOpen(false); onReact?.(_id, "👍")}}>👍 React</button>
             <button className='px-3 py-2 hover:bg-gray-100 w-full text-left' onClick={()=>{setOpen(false); onDeleteForMe?.(_id)}}>Delete for me</button>

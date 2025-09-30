@@ -11,7 +11,32 @@ import { app, server } from "./socket/socket.js";
 import path from "path";
 import { fileURLToPath } from "url";
 
-dotenv.config();
+dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), '.env') });
+
+// Fallback env loader in case dotenv fails in certain shells
+try {
+  if (!process.env.MONGODB_URL) {
+    const envPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '.env');
+    const fs = await import('fs');
+    if (fs.existsSync(envPath)) {
+      const raw = fs.readFileSync(envPath, 'utf8');
+      raw.split(/\r?\n/).forEach(line => {
+        const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+        if (m) {
+          const key = m[1];
+          let value = m[2];
+          // strip optional surrounding quotes
+          if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.slice(1, -1);
+          }
+          if (!process.env[key]) process.env[key] = value;
+        }
+      });
+    }
+  }
+} catch (e) {
+  // ignore fallback errors
+}
 
 const port = process.env.PORT || 5000;
 

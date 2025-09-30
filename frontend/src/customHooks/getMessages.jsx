@@ -5,26 +5,44 @@ import { useDispatch, useSelector } from "react-redux"
 import { setOtherUsers, setUserData } from "../redux/userSlice"
 import { setMessages } from "../redux/messageSlice"
 
-const getMessage=()=>{
-    let dispatch=useDispatch()
-    let {userData,selectedUser,selectedGroup}=useSelector(state=>state.user)
-    useEffect(()=>{
-        const fetchMessages=async ()=>{
-            try {
-                if(selectedUser){
-                    let result=await axios.get(`${serverUrl}/api/message/get/${selectedUser._id}`,{withCredentials:true})
-                    dispatch(setMessages(result.data))
-                    await axios.post(`${serverUrl}/api/message/read/${selectedUser._id}`,{}, {withCredentials:true})
-                } else if(selectedGroup){
-                    let result=await axios.get(`${serverUrl}/api/group/messages/${selectedGroup._id}`,{withCredentials:true})
-                    dispatch(setMessages(result.data))
-                }
-            } catch (error) {
-                console.log(error)
-            }
+function getMessage(){
+  const dispatch = useDispatch()
+  const {selectedUser,selectedGroup} = useSelector(s=>s.user)
+
+  useEffect(()=>{
+    const load = async ()=>{
+      try{
+        if(selectedUser){
+          const res = await axios.get(`${serverUrl}/api/message/get/${selectedUser._id}`, {withCredentials:true})
+          dispatch(setMessages(res.data))
+          // mark read for personal chat
+          await axios.post(`${serverUrl}/api/message/read/${selectedUser._id}`, {}, {withCredentials:true})
+        } else if(selectedGroup){
+          const res = await axios.get(`${serverUrl}/api/group/messages/${selectedGroup._id}`, {withCredentials:true})
+          dispatch(setMessages(res.data))
+        } else {
+          dispatch(setMessages(null))
         }
-        fetchMessages()
-    },[selectedUser,selectedGroup,userData])
+      }catch(e){
+        console.log(e)
+      }
+    }
+    load()
+
+    const onFocus = async ()=>{
+      try{
+        if(selectedUser){
+          await axios.post(`${serverUrl}/api/message/read/${selectedUser._id}`, {}, {withCredentials:true})
+        }
+      }catch(e){
+        // ignore
+      }
+    }
+    window.addEventListener('focus', onFocus)
+    return ()=>{
+      window.removeEventListener('focus', onFocus)
+    }
+  },[selectedUser, selectedGroup])
 }
 
 export default getMessage

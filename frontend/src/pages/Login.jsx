@@ -36,23 +36,26 @@ function Login() {
         }
     
   return (
-    <div className='w-full h-[100vh] bg-slate-200 flex items-center justify-center'>
-     <div className='w-full max-w-[500px] h-[600px] bg-white rounded-lg shadow-gray-400 shadow-lg flex flex-col gap-[30px]'>
-        <div className='w-full h-[200px] bg-[#20c7ff] rounded-b-[30%] shadow-gray-400 shadow-lg flex items-center justify-center'>
-           <h1 className='text-gray-600 font-bold text-[30px]'>Login to <span  className='text-white'>TEAM-CHAT-SYSTEM</span></h1>
+    <div className='min-h-[100vh] w-full bg-gradient-to-b from-white to-violet-50 flex items-center justify-center px-4'>
+      <div className='w-full max-w-[560px] bg-white rounded-2xl shadow-xl p-8 relative'>
+        <div className='absolute -top-8 left-1/2 -translate-x-1/2 w-[72px] h-[72px] rounded-2xl bg-violet-600 shadow-[0_0_40px_rgba(139,92,246,0.45)] flex items-center justify-center text-white text-2xl'>💬</div>
+        <div className='mt-8 text-center mb-6'>
+          <h1 className='text-3xl font-extrabold text-gray-900'>Welcome Back</h1>
+          <p className='text-gray-500 mt-2'>Sign in to continue your conversations</p>
         </div>
-        <form className='w-full flex flex-col gap-[20px] items-center' onSubmit={handleLogin}>
-        <input type="email" placeholder='email' className='w-[90%] h-[50px] outline-none border-2 border-[#20c7ff] px-[20px] py-[10px] bg-[white] rounded-lg shadow-gray-200 shadow-lg text-gray-700 text-[19px]' onChange={(e)=>setEmail(e.target.value)} value={email}/>
-        <div className='w-[90%] h-[50px] border-2 border-[#20c7ff] overflow-hidden rounded-lg shadow-gray-200 shadow-lg relative'>
-        <input type={`${show?"text":"password"}`} placeholder='password' className='w-full h-full outline-none  px-[20px] py-[10px] bg-[white]  text-gray-700 text-[19px]' onChange={(e)=>setPassword(e.target.value)} value={password}/>
-        <span className='absolute top-[10px] right-[20px] text-[19px] text-[#20c7ff] font-semibold cursor-pointer' onClick={()=>setShow(prev=>!prev)}>{`${show?"hidden":"show"}`}</span>
+        <form className='flex flex-col gap-4' onSubmit={handleLogin}>
+          <input type="email" placeholder='Email' className='h-[52px] rounded-xl border border-gray-200 px-4 outline-none focus:ring-2 focus:ring-violet-300' onChange={(e)=>setEmail(e.target.value)} value={email}/>
+          <div className='h-[52px] rounded-xl border border-gray-200 px-4 flex items-center gap-2'>
+            <input type={`${show?"text":"password"}`} placeholder='Password' className='w-full h-full outline-none' onChange={(e)=>setPassword(e.target.value)} value={password}/>
+            <span className='text-violet-600 text-sm font-semibold cursor-pointer' onClick={()=>setShow(prev=>!prev)}>{`${show?"Hide":"Show"}`}</span>
+          </div>
+          {err && <p className='text-red-500 text-sm'>{"*" + err}</p>}
+          <button className='mt-2 h-[52px] rounded-xl bg-violet-600 text-white font-semibold shadow-[0_8px_30px_rgba(139,92,246,0.35)] hover:bg-violet-700 transition disabled:opacity-50' disabled={loading}>{loading?"Loading...":"Sign In"}</button>
+        </form>
+        <div className='text-center text-gray-600 mt-6'>
+          Don't have an account? <span className='text-violet-600 font-semibold cursor-pointer' onClick={()=>navigate('/signup')}>Sign up</span>
         </div>
-{err && <p className='text-red-500'>{"*" + err}</p>}
-        <button className='px-[20px] py-[10px] bg-[#20c7ff] rounded-2xl shadow-gray-400 shadow-lg text-[20px] w-[200px] mt-[20px] font-semibold hover:shadow-inner' disabled={loading}>{loading?"Loading...":"Login"}</button>
-        <p className='cursor-pointer' onClick={()=>navigate("/signup")}>Want to create a new account ? <span className='text-[#20c7ff] text-[bold]' >sign up</span></p>
-     </form>
-     </div>
-     
+      </div>
     </div>
   )
 }

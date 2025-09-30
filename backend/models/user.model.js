@@ -26,6 +26,10 @@ status:{
     type:String,
     default:"online" // online | away | busy | offline
 },
+lastSeen:{
+    type:Date,
+    default:null
+},
 blockedUsers:[{
     type:mongoose.Schema.Types.ObjectId,
     ref:"User"
