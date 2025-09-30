@@ -27,6 +27,7 @@ let [isTyping,setIsTyping]=useState(false)
 let typingTimeout=useRef(null)
 let [showManage,setShowManage]=useState(false)
 let [gifUrl,setGifUrl]=useState("")
+let [replyTo,setReplyTo]=useState(null)
 const handleImage=(e)=>{
   let file=e.target.files[0]
   setBackendImage(file)
@@ -42,6 +43,9 @@ const handleSendMessage=async (e)=>{
     formData.append("message",input)
     if(backendImage){
       formData.append("image",backendImage)
+    }
+    if(replyTo){
+      formData.append("replyTo", replyTo._id)
     }
     let result
     if(selectedUser){
@@ -61,6 +65,7 @@ const handleSendMessage=async (e)=>{
     setFrontendImage(null)
     setBackendImage(null)
     setGifUrl("")
+    setReplyTo(null)
   } catch (error) {
     console.log(error)
   }
@@ -79,6 +84,15 @@ const handleDeleteForEveryone = async (messageId)=>{
   try{
     await axios.delete(`${serverUrl}/api/message/delete/everyone/${messageId}`,{withCredentials:true})
     const updated = messages.map(m=> m._id===messageId ? {...m, isDeletedForEveryone:true, message:"", image:""} : m)
+    dispatch(setMessages(updated))
+  }catch(err){
+    console.log(err)
+  }
+}
+const handleReact = async (messageId, reaction) => {
+  try{
+    await axios.post(`${serverUrl}/api/message/react/${messageId}`, {reaction}, {withCredentials:true})
+    const updated = messages.map(m=> m._id===messageId ? {...m, reactions: [...(m.reactions||[]), reaction]} : m)
     dispatch(setMessages(updated))
   }catch(err){
     console.log(err)
@@ -145,9 +159,16 @@ return ()=>{
          ))}
        </div>
         {selectedGroup && selectedGroup.admins?.includes(userData?._id) && (
-          <button className='ml-auto text-sm bg-white/20 text-white px-3 py-1 rounded-full' onClick={()=>setShowManage(true)}>Manage</button>
-        )}
+        <button className='ml-auto text-sm bg-white/20 text-white px-3 py-1 rounded-full' onClick={()=>setShowManage(true)}>Manage</button>
+       )}
     </div>
+    {replyTo && (
+      <div className='bg-white/20 rounded p-2 mx-4 mb-2 text-[14px] border-l-2 border-white/40'>
+        <span className='opacity-70'>Replying to:</span>
+        <div className='truncate'>{replyTo.message || "Media message"}</div>
+        <button className='text-red-400 text-[12px]' onClick={()=>setReplyTo(null)}>Cancel</button>
+      </div>
+    )}
 
     <div className='w-full h-[70%] flex flex-col py-[30px]  px-[20px] overflow-auto gap-[20px] '>
 
@@ -155,8 +176,8 @@ return ()=>{
 
 {messages && messages.map((mess)=>(
   mess.sender==userData._id?
-  <SenderMessage _id={mess._id} image={mess.image} video={mess.video} audio={mess.audio} file={mess.file} gif={mess.gif} message={mess.message} status={mess.status} isDeletedForEveryone={mess.isDeletedForEveryone} onDeleteForMe={handleDeleteForMe} onDeleteForEveryone={handleDeleteForEveryone}/>:
-  <ReceiverMessage _id={mess._id} image={mess.image} video={mess.video} audio={mess.audio} file={mess.file} gif={mess.gif} message={mess.message} isDeletedForEveryone={mess.isDeletedForEveryone} onDeleteForMe={handleDeleteForMe}/>
+  <SenderMessage _id={mess._id} image={mess.image} video={mess.video} audio={mess.audio} file={mess.file} gif={mess.gif} message={mess.message} status={mess.status} isDeletedForEveryone={mess.isDeletedForEveryone} onDeleteForMe={handleDeleteForMe} onDeleteForEveryone={handleDeleteForEveryone} replyTo={mess.replyTo} reactions={mess.reactions} onReact={handleReact} onReply={setReplyTo}/>:
+  <ReceiverMessage _id={mess._id} image={mess.image} video={mess.video} audio={mess.audio} file={mess.file} gif={mess.gif} message={mess.message} isDeletedForEveryone={mess.isDeletedForEveryone} onDeleteForMe={handleDeleteForMe} replyTo={mess.replyTo} reactions={mess.reactions} onReact={handleReact} onReply={setReplyTo}/>
 ))}
  
 

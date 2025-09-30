@@ -7,7 +7,7 @@ export const sendMessage=async (req,res)=>{
     try {
         let sender=req.userId
         let {receiver}=req.params
-        let {message, gif} = req.body
+        let {message, gif, replyTo} = req.body
 
         let image, video, audio, fileUrl
         if(req.file){
@@ -29,7 +29,7 @@ export const sendMessage=async (req,res)=>{
         })
 
         let newMessage=await Message.create({
-            sender,receiver,message,image,video,audio,file:fileUrl,gif,status:"sent"
+            sender,receiver,message,image,video,audio,file:fileUrl,gif,replyTo,status:"sent"
         })
 
         if(!conversation){
@@ -57,6 +57,24 @@ if(receiverSocketId){
     
     } catch (error) {
         return res.status(500).json({message:`send Message error ${error}`})
+    }
+}
+
+export const reactToMessage = async (req, res) => {
+    try {
+        const { messageId } = req.params
+        const { reaction } = req.body
+        const message = await Message.findById(messageId)
+        if(!message){
+            return res.status(404).json({message:"Message not found"})
+        }
+        if(!message.reactions.includes(reaction)){
+            message.reactions.push(reaction)
+            await message.save()
+        }
+        return res.status(200).json(message)
+    } catch (error) {
+        return res.status(500).json({message:`react error ${error}`})
     }
 }
 

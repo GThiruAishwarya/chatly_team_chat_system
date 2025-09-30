@@ -18,10 +18,22 @@ const userSchema=new mongoose.Schema({
         type:String,
         required:true,
     },
-    image:{
-        type:String,
-        default:""
-    }
+image:{
+    type:String,
+    default:""
+},
+status:{
+    type:String,
+    default:"online" // online | away | busy | offline
+},
+blockedUsers:[{
+    type:mongoose.Schema.Types.ObjectId,
+    ref:"User"
+}],
+mutedUsers:[{
+    type:mongoose.Schema.Types.ObjectId,
+    ref:"User"
+}]
 },{timestamps:true})
 
 const User=mongoose.model("User",userSchema)

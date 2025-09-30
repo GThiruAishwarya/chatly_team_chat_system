@@ -39,6 +39,15 @@ gif:{
     type:String,
     default:""
 },
+replyTo:{
+    type:mongoose.Schema.Types.ObjectId,
+    ref:"Message",
+    required:false
+},
+reactions:[{
+    type:String,
+    default:""
+}],
 status:{
     type:String,
     default:"sent" // sent | delivered | read

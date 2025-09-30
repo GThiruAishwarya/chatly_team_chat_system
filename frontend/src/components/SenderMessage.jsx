@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import dp from "../assets/dp.webp"
 import { useSelector } from 'react-redux'
 import { RiMore2Fill } from "react-icons/ri"
-function SenderMessage({image,video,audio,file,gif,message,_id,onDeleteForMe,onDeleteForEveryone,isDeletedForEveryone,status}) {
+function SenderMessage({image,video,audio,file,gif,message,_id,onDeleteForMe,onDeleteForEveryone,isDeletedForEveryone,status,replyTo,reactions,onReact,onReply}) {
   let scroll = useRef()
   let {userData}=useSelector(state=>state.user)
   let [open,setOpen]=useState(false)
@@ -16,6 +16,12 @@ function SenderMessage({image,video,audio,file,gif,message,_id,onDeleteForMe,onD
     <div className='flex items-start gap-[10px]' >
      
       <div ref={scroll} className='w-fit max-w-[500px] px-[20px] py-[10px]  bg-[rgb(23,151,194)] text-white text-[19px] rounded-tr-none rounded-2xl relative right-0 ml-auto shadow-gray-400 shadow-lg gap-[10px] flex flex-col'>
+    {replyTo && (
+      <div className='bg-white/20 rounded p-2 text-[14px] border-l-2 border-white/40'>
+        <span className='opacity-70'>Replying to:</span>
+        <div className='truncate'>{replyTo.message || "Media message"}</div>
+      </div>
+    )}
     {!isDeletedForEveryone && image &&  <img src={image} alt="" className='w-[150px] rounded-lg' onLoad={handleImageScroll}/>}
     {!isDeletedForEveryone && video && <video src={video} controls className='w-[220px] rounded-lg' onLoadedData={handleImageScroll}/>} 
     {!isDeletedForEveryone && audio && <audio src={audio} controls className='w-[220px]'/>}
@@ -23,6 +29,13 @@ function SenderMessage({image,video,audio,file,gif,message,_id,onDeleteForMe,onD
     {!isDeletedForEveryone && file && <a href={file} target='_blank' rel='noreferrer' className='underline text-[14px] break-all'>Attachment</a>}
    {!isDeletedForEveryone && message && <span >{message}</span>}
    {isDeletedForEveryone && <span className='italic opacity-70'>Message deleted</span>}
+   {reactions && reactions.length > 0 && (
+     <div className='flex gap-1 flex-wrap'>
+       {reactions.map((reaction, idx) => (
+         <span key={idx} className='bg-white/20 px-2 py-1 rounded-full text-[12px]'>{reaction}</span>
+       ))}
+     </div>
+   )}
    {!isDeletedForEveryone && (
     <span className='text-[12px] opacity-80 self-end'>
       {status==="read"?"✓✓":status==="delivered"?"✓✓":"✓"}
@@ -32,6 +45,8 @@ function SenderMessage({image,video,audio,file,gif,message,_id,onDeleteForMe,onD
      <RiMore2Fill className='text-gray-600 cursor-pointer' onClick={()=>setOpen(prev=>!prev)} />
      {open && (
       <div className='bg-white text-gray-800 rounded shadow-md text-[14px]'>
+        <button className='px-3 py-2 hover:bg-gray-100 w-full text-left' onClick={()=>{setOpen(false); onReply?.({_id, message, image, video, audio, file, gif})}}>Reply</button>
+        <button className='px-3 py-2 hover:bg-gray-100 w-full text-left' onClick={()=>{setOpen(false); onReact?.(_id, "👍")}}>👍 React</button>
         <button className='px-3 py-2 hover:bg-gray-100 w-full text-left' onClick={()=>{setOpen(false); onDeleteForMe?.(_id)}}>Delete for me</button>
         <button className='px-3 py-2 hover:bg-gray-100 w-full text-left' onClick={()=>{setOpen(false); onDeleteForEveryone?.(_id)}}>Delete for everyone</button>
       </div>
