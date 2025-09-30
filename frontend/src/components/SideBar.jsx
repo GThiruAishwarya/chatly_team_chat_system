@@ -73,8 +73,8 @@ console.log(error)
         return date.toLocaleDateString()
     }
   return (
-    <div className={`lg:w-[30%] w-full h-full overflow-hidden lg:block bg-slate-200  relative ${!selectedUser?"block":"hidden"}`}>
-        <div className='w-[60px] h-[60px] mt-[10px] rounded-full overflow-hidden flex justify-center items-center bg-[#20c7ff] shadow-gray-500 text-gray-700 cursor-pointer shadow-lg fixed bottom-[20px] left-[10px]' onClick={handleLogOut}>
+    <div className={`lg:w-[30%] w-full h-full overflow-hidden lg:block bg-slate-200 relative ${!selectedUser?"block":"hidden"} fade-in`}>
+        <div className='w-[60px] h-[60px] mt-[10px] rounded-full overflow-hidden flex justify-center items-center bg-[#20c7ff] shadow-gray-500 text-gray-700 cursor-pointer shadow-lg fixed bottom-[20px] left-[10px] hover-scale' onClick={handleLogOut}>
    <BiLogOutCircle className='w-[25px] h-[25px]'/>
 </div>
 {input.length>0 && <div className='flex absolute top-[250px] bg-[white] w-full h-[500px] overflow-y-auto items-center pt-[20px] flex-col gap-[10px] z-[150] shadow-lg'>
@@ -97,21 +97,21 @@ console.log(error)
 ))}
         </div> }
 
-      <div className='w-full h-[300px] bg-[#20c7ff] rounded-b-[30%] shadow-gray-400 shadow-lg flex flex-col justify-center px-[20px] '>
-    <h1 className='text-white font-bold text-[25px]'>chatly</h1>
+      <div className='w-full h-[300px] bg-gradient-to-br from-[#20c7ff] to-[#1797c2] rounded-b-[30%] shadow-gray-400 shadow-lg flex flex-col justify-center px-[20px] slide-down'>
+    <h1 className='text-white font-extrabold text-[28px] tracking-wide'>chatly</h1>
    <div className='w-full flex justify-between items-center'>
     <h1 className='text-gray-800 font-bold text-[25px]'>Hii , {userData.name || "user"}</h1>
-    <div className='w-[60px] h-[60px] rounded-full overflow-hidden flex justify-center items-center bg-white cursor-pointer shadow-gray-500 shadow-lg' onClick={()=>navigate("/profile")}>
+    <div className='w-[60px] h-[60px] rounded-full overflow-hidden flex justify-center items-center bg-white cursor-pointer shadow-gray-500 shadow-lg hover-raise' onClick={()=>navigate("/profile")}>
 <img src={userData.image || dp} alt="" className='h-[100%]'/>
 </div>
    </div>
    <div className='w-full  flex items-center gap-[20px] overflow-y-auto py-[18px]'>
-    {!search && <div className='w-[60px] h-[60px] mt-[10px] rounded-full overflow-hidden flex justify-center items-center bg-white shadow-gray-500 cursor-pointer shadow-lg' onClick={()=>setSearch(true)}>
+    {!search && <div className='w-[60px] h-[60px] mt-[10px] rounded-full overflow-hidden flex justify-center items-center bg-white shadow-gray-500 cursor-pointer shadow-lg hover-scale' onClick={()=>setSearch(true)}>
    <IoIosSearch className='w-[25px] h-[25px]'/>
 </div>}
 
 {search && 
-    <form className='w-full h-[60px] bg-white shadow-gray-500 shadow-lg flex items-center gap-[10px] mt-[10px] rounded-full overflow-hidden px-[20px] relative'>
+    <form className='w-full h-[60px] bg-white shadow-gray-500 shadow-lg flex items-center gap-[10px] mt-[10px] rounded-full overflow-hidden px-[20px] relative pop-in'>
     <IoIosSearch className='w-[25px] h-[25px]'/>
     <input type="text" placeholder='search users...' className='w-full h-full p-[10px] text-[17px] outline-none border-0 ' onChange={(e)=>setInput(e.target.value)} value={input}/>
     <RxCross2 className='w-[25px] h-[25px] cursor-pointer' onClick={()=>setSearch(false)}/>
@@ -120,7 +120,7 @@ console.log(error)
     }
 {!search && otherUsers?.map((user)=>(
     onlineUsers?.includes(user._id) &&
-    <div className='relative rounded-full shadow-gray-500 bg-white shadow-lg flex justify-center items-center mt-[10px] cursor-pointer' onClick={()=>dispatch(setSelectedUser(user))}>
+    <div className='relative rounded-full shadow-gray-500 bg-white shadow-lg flex justify-center items-center mt-[10px] cursor-pointer hover-scale' onClick={()=>dispatch(setSelectedUser(user))}>
     <div className='w-[60px] h-[60px]   rounded-full overflow-hidden flex justify-center items-center '>
     <img src={user.image || dp} alt="" className='h-[100%]'/>
     </div>
@@ -132,7 +132,7 @@ console.log(error)
       </div>
 
       <div className='w-full h-[50%] overflow-auto flex flex-col gap-[20px] items-center mt-[20px]'>
-      <div className='w-[95%] flex justify-between items-center'>
+      <div className='w-[95%] flex justify-between items-center slide-down'>
         <h2 className='text-gray-700 font-semibold'>Conversations</h2>
         <button className='text-sm bg-[#20c7ff] text-white px-3 py-1 rounded-full shadow' onClick={()=>setShowCreateGroup(true)}>New Group</button>
       </div>
@@ -141,7 +141,7 @@ console.log(error)
       {conversations?.map(conv=> (
         <div 
           key={conv._id}
-          className='w-[95%] h-[70px] flex items-center gap-[20px] shadow-gray-500 bg-white shadow-lg rounded-full hover:bg-[#78cae5] cursor-pointer p-2' 
+          className='w-[95%] h-[70px] flex items-center gap-[20px] shadow-gray-500 bg-white shadow-lg rounded-full hover:bg-[#78cae5] cursor-pointer p-2 fade-in'
           onClick={()=>{
             if(conv.isGroup) {
               dispatch(setSelectedGroup(conv)); 
@@ -156,7 +156,7 @@ console.log(error)
             }
           }}
         >
-          <div className='w-[50px] h-[50px] rounded-full overflow-hidden flex justify-center items-center'>
+          <div className='w-[50px] h-[50px] rounded-full overflow-hidden flex justify-center items-center hover-scale'>
             <img src={conv.image || dp} alt="" className='h-[100%]' />
           </div>
           <div className='flex-1 min-w-0'>

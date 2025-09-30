@@ -215,11 +215,11 @@ return ()=>{
 },[messages,setMessages,selectedGroup])
  
   return (
-    <div className={`lg:w-[70%] relative   ${(selectedUser||selectedGroup)?"flex":"hidden"} lg:flex  w-full h-full bg-slate-200 border-l-2 border-gray-300 overflow-hidden`}>
+    <div className={`lg:w-[70%] relative   ${(selectedUser||selectedGroup)?"flex":"hidden"} lg:flex  w-full h-full bg-slate-200 border-l-2 border-gray-300 overflow-hidden fade-in`}>
       
 {(selectedUser || selectedGroup) && 
 <div className='w-full h-[100vh] flex flex-col overflow-hidden gap-[20px] items-center'>
-<div className='w-full h-[100px] bg-[#1797c2] rounded-b-[30px] shadow-gray-400 shadow-lg gap-[20px] flex items-center px-[20px] '>
+<div className='w-full h-[100px] bg-gradient-to-r from-[#1797c2] to-[#20c7ff] rounded-b-[30px] shadow-gray-400 shadow-lg gap-[20px] flex items-center px-[20px] slide-down'>
             <div className='cursor-pointer' onClick={()=>{dispatch(setSelectedUser(null)); dispatch(setSelectedGroup(null))}}>
                   <IoIosArrowRoundBack className='w-[40px] h-[40px] text-white'/>
            </div>
@@ -244,7 +244,7 @@ return ()=>{
       </div>
     )}
 
-    <div className='w-full h-[70%] flex flex-col py-[30px]  px-[20px] overflow-auto gap-[20px] '>
+    <div className='w-full h-[70%] flex flex-col py-[30px]  px-[20px] overflow-auto gap-[20px] fade-in-slow '>
 
 {showPicker && <div className='absolute bottom-[120px] left-[20px]'><EmojiPicker width={250} height={350} className='shadow-lg z-[100]' onEmojiClick={onEmojiClick}/></div> }
 
@@ -274,9 +274,9 @@ return ()=>{
     </div>
     </div> 
     }
-{(selectedUser || selectedGroup) && <div className='w-full lg:w-[70%] h-[100px] fixed bottom-[20px] flex items-center justify-center '>
+{(selectedUser || selectedGroup) && <div className='w-full lg:w-[70%] h-[100px] fixed bottom-[20px] flex items-center justify-center slide-up '>
       <img src={frontendImage} alt="" className='w-[80px] absolute bottom-[100px] right-[20%] rounded-lg shadow-gray-400 shadow-lg'/>
-     <form className='w-[95%] lg:w-[70%] h-[60px] bg-[rgb(23,151,194)] shadow-gray-400 shadow-lg rounded-full flex items-center gap-[20px] px-[20px] relative' onSubmit={handleSendMessage}>
+     <form className='w-[95%] lg:w-[70%] h-[60px] bg-[rgb(23,151,194)] shadow-gray-400 shadow-lg rounded-full flex items-center gap-[20px] px-[20px] relative pop-in' onSubmit={handleSendMessage}>
       
        <div onClick={()=>setShowPicker(prev=>!prev)}>
        <RiEmojiStickerLine  className='w-[25px] h-[25px] text-white cursor-pointer'/>
