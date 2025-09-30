@@ -151,7 +151,8 @@ console.log(error)
               <div 
                 key={conv._id}
                 className='w-[95%] h-[70px] flex items-center gap-[20px] shadow-gray-500 bg-white shadow-lg rounded-full hover:bg-violet-100 cursor-pointer p-2 fade-in'
-                onClick={()=>{
+                onClick={(e)=>{
+                  e.preventDefault(); e.stopPropagation();
                   if(conv.isGroup) {
                     dispatch(setSelectedGroup(conv)); 
                     dispatch(setSelectedUser(null))
@@ -207,7 +208,7 @@ console.log(error)
               <div 
                 key={g._id}
                 className='w-[95%] h-[70px] flex items-center gap-[20px] shadow-gray-500 bg-white shadow-lg rounded-full hover:bg-violet-100 cursor-pointer p-2 fade-in'
-                onClick={()=>{dispatch(setSelectedGroup(g)); dispatch(setSelectedUser(null))}}
+                onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); dispatch(setSelectedGroup(g)); dispatch(setSelectedUser(null))}}
               >
                 <div className='w-[50px] h-[50px] rounded-full overflow-hidden flex justify-center items-center hover-scale'>
                   <img src={g.image || dp} alt="" className='h-[100%]' />
