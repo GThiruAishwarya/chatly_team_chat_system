@@ -56,6 +56,8 @@ const startRecording = async () => {
       const audioBlob = new Blob(audioChunks.current, { type: 'audio/wav' })
       setBackendImage(audioBlob)
       setFrontendImage(URL.createObjectURL(audioBlob))
+      // Immediately send voice note
+      sendVoiceNote(audioBlob).catch(()=>{})
       stream.getTracks().forEach(track => track.stop())
     }
     
@@ -104,7 +106,7 @@ const handleStickerClick = (sticker) => {
   setShowStickers(false)
 }
 const handleSendMessage=async (e)=>{
-  e.preventDefault()
+  if(e && e.preventDefault){ e.preventDefault() }
   if(input.length==0 && backendImage==null){
     return 
   }
@@ -112,12 +114,8 @@ const handleSendMessage=async (e)=>{
     let formData=new FormData()
     formData.append("message",input)
     if(backendImage){
-      // Check if it's an audio file
-      if(backendImage.type && backendImage.type.startsWith('audio/')){
-        formData.append("audio",backendImage)
-      } else {
-        formData.append("image",backendImage)
-      }
+      // Always append under key "image" so backend multer (field: image) receives it
+      formData.append("image",backendImage)
     }
     if(replyTo){
       formData.append("replyTo", replyTo._id)
@@ -155,6 +153,34 @@ const handleSendMessage=async (e)=>{
     setReplyTo(null)
   } catch (error) {
     console.log(error)
+  }
+}
+
+// send a recorded voice note immediately
+const sendVoiceNote = async (blob)=>{
+  try{
+    let formData = new FormData()
+    formData.append('message', '')
+    // personal messages expect field name "image" in multer
+    formData.append('image', blob)
+    let result
+    if(selectedUser){
+      result = await axios.post(`${serverUrl}/api/message/send/${selectedUser._id}`, formData, {withCredentials:true})
+    }else if(selectedGroup){
+      // group route expects field name "attachment"
+      const fd = new FormData()
+      fd.append('message','')
+      fd.append('attachment', blob)
+      result = await axios.post(`${serverUrl}/api/group/send/${selectedGroup._id}`, fd, {withCredentials:true})
+    } else {
+      return
+    }
+    dispatch(setMessages([...(messages||[]), result.data]))
+    setInput("")
+    setFrontendImage(null)
+    setBackendImage(null)
+  }catch(err){
+    console.log(err)
   }
 }
 const handleDeleteForMe = async (messageId)=>{
