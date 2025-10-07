@@ -31,6 +31,9 @@ export const sendMessage=async (req,res)=>{
         let newMessage=await Message.create({
             sender,receiver,message,image,video,audio,file:fileUrl,gif,sticker,replyTo,status:"sent"
         })
+        
+        // Populate sender information
+        await newMessage.populate('sender', 'name userName')
 
         if(!conversation){
             conversation=await Conversation.create({
@@ -44,7 +47,12 @@ export const sendMessage=async (req,res)=>{
 
         const receiverSocketId=getReceiverSocketId(receiver)
 if(receiverSocketId){
-    io.to(receiverSocketId).emit("newMessage",newMessage)
+    // Include sender name in the message data
+    const messageWithSender = {
+        ...newMessage.toObject(),
+        senderName: newMessage.sender?.name || newMessage.sender?.userName || "Someone"
+    }
+    io.to(receiverSocketId).emit("newMessage", messageWithSender)
     // delivered as it reached receiver's socket namespace
     newMessage.status = "delivered"
     await newMessage.save()

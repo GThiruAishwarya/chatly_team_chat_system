@@ -32,10 +32,10 @@ io.on("connection", (socket) => {
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
   // typing indicators
-  socket.on("typing", ({ to }) => {
+  socket.on("typing", ({ to, senderName }) => {
     const receiverSocketId = userSocketMap[to];
     if (receiverSocketId) {
-      io.to(receiverSocketId).emit("typing", { from: String(userId) });
+      io.to(receiverSocketId).emit("typing", { from: String(userId), senderName });
     }
   });
 
@@ -44,6 +44,17 @@ io.on("connection", (socket) => {
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("stopTyping", { from: String(userId) });
     }
+  });
+
+  // group typing indicators
+  socket.on("groupTyping", ({ groupId, senderName }) => {
+    // Broadcast to all online users (in a real app, you'd filter by group members)
+    io.emit("groupTyping", { from: String(userId), groupId, senderName });
+  });
+
+  socket.on("stopGroupTyping", ({ groupId }) => {
+    // Broadcast to all online users (in a real app, you'd filter by group members)
+    io.emit("stopGroupTyping", { from: String(userId), groupId });
   });
 
   // disconnect

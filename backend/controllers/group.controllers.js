@@ -185,6 +185,10 @@ export const sendGroupMessage = async (req, res) => {
             mentions: mentionIds,
             status:"sent" 
         })
+        
+        // Populate sender information
+        await newMessage.populate('sender', 'name userName')
+        
         group.messages.push(newMessage._id)
         await group.save()
         
@@ -194,7 +198,12 @@ export const sendGroupMessage = async (req, res) => {
             if(idStr!==String(sender)){
                 const sid = getReceiverSocketId(idStr)
                 if(sid){
-                    io.to(sid).emit("newGroupMessage", { ...newMessage.toObject(), group: groupId })
+                    // Include sender name in the message data
+                    const messageWithSender = {
+                        ...newMessage.toObject(),
+                        senderName: newMessage.sender?.name || newMessage.sender?.userName || "Someone"
+                    }
+                    io.to(sid).emit("newGroupMessage", { ...messageWithSender, group: groupId })
                 }
             }
         })

@@ -25,6 +25,8 @@ let image=useRef()
 let attachment=useRef()
 let {messages}=useSelector(state=>state.message)
 let [isTyping,setIsTyping]=useState(false)
+let [typingUsers,setTypingUsers]=useState([])
+let [typingMessage,setTypingMessage]=useState("")
 let typingTimeout=useRef(null)
 let [showManage,setShowManage]=useState(false)
 let [gifUrl,setGifUrl]=useState("")
@@ -233,14 +235,35 @@ socket?.on("messageStatus",({messageId,status})=>{
   const updated = (messages||[]).map(m=> m._id===messageId ? {...m, status} : m)
   dispatch(setMessages(updated))
 })
-socket?.on("typing", ({from})=>{
+socket?.on("typing", ({from, senderName})=>{
   if(from===selectedUser?._id){
     setIsTyping(true)
+    setTypingMessage(`${senderName || 'Someone'} is typing...`)
   }
 })
 socket?.on("stopTyping", ({from})=>{
   if(from===selectedUser?._id){
     setIsTyping(false)
+  }
+})
+socket?.on("groupTyping", ({from, groupId, senderName})=>{
+  if(selectedGroup && String(groupId)===String(selectedGroup._id) && from!==userData?._id){
+    setTypingUsers(prev => {
+      if(!prev.includes(from)){
+        return [...prev, from]
+      }
+      return prev
+    })
+    setIsTyping(true)
+    setTypingMessage(`${senderName || 'Someone'} is typing...`)
+  }
+})
+socket?.on("stopGroupTyping", ({from, groupId})=>{
+  if(selectedGroup && String(groupId)===String(selectedGroup._id) && from!==userData?._id){
+    setTypingUsers(prev => prev.filter(id => id !== from))
+    if(typingUsers.length <= 1){
+      setIsTyping(false)
+    }
   }
 })
 socket?.on("groupNotification", (payload)=>{
@@ -256,10 +279,18 @@ return ()=>{
   socket?.off("messageStatus")
   socket?.off("typing")
   socket?.off("stopTyping")
+  socket?.off("groupTyping")
+  socket?.off("stopGroupTyping")
   socket?.off("newGroupMessage")
   socket?.off("groupNotification")
 }
-},[messages,setMessages,selectedGroup])
+},[messages,setMessages,selectedGroup,selectedUser])
+
+// Clear typing state when switching conversations
+useEffect(() => {
+  setIsTyping(false)
+  setTypingUsers([])
+}, [selectedUser, selectedGroup])
  
   return (
     <div className={`lg:w-[70%] relative   ${(selectedUser||selectedGroup)?"flex":"hidden"} lg:flex  w-full h-full bg-slate-200 border-l-2 border-gray-300 overflow-hidden fade-in`}>
@@ -277,10 +308,21 @@ return ()=>{
          <h1 className='text-white font-semibold text-[20px]'>{selectedUser?.name || selectedGroup?.name || "user"}</h1>
          {selectedUser && (
            isTyping ? (
-             <span className='text-white text-[12px] opacity-80'>{(selectedUser.name || selectedUser.userName) + ' is typing…'}</span>
+             <span className='text-white text-[12px] opacity-80'>{typingMessage || (selectedUser.name || selectedUser.userName) + ' is typing…'}</span>
            ) : (
              <span className='text-white text-[12px] opacity-80'>
                {onlineUsers?.includes(selectedUser._id)?"Online": (selectedUser?.lastSeen ? `last seen ${new Date(selectedUser.lastSeen).toLocaleString([], {hour:'2-digit', minute:'2-digit'})}` : 'Offline')}
+             </span>
+           )
+         )}
+         {selectedGroup && (
+           isTyping ? (
+             <span className='text-white text-[12px] opacity-80'>
+               {typingMessage || (typingUsers.length === 1 ? 'Someone is typing…' : `${typingUsers.length} people are typing…`)}
+             </span>
+           ) : (
+             <span className='text-white text-[12px] opacity-80'>
+               {selectedGroup.partcipants?.length || 0} members
              </span>
            )
          )}
@@ -323,8 +365,8 @@ return ()=>{
 
 {messages && messages.map((mess)=>(
   mess.sender==userData._id?
-  <SenderMessage _id={mess._id} image={mess.image} video={mess.video} audio={mess.audio} file={mess.file} gif={mess.gif} sticker={mess.sticker} message={mess.message} status={mess.status} isDeletedForEveryone={mess.isDeletedForEveryone} onDeleteForMe={handleDeleteForMe} onDeleteForEveryone={handleDeleteForEveryone} replyTo={mess.replyTo} reactions={mess.reactions} onReact={handleReact} onReply={setReplyTo} createdAt={mess.createdAt}/>:
-  <ReceiverMessage _id={mess._id} image={mess.image} video={mess.video} audio={mess.audio} file={mess.file} gif={mess.gif} sticker={mess.sticker} message={mess.message} isDeletedForEveryone={mess.isDeletedForEveryone} onDeleteForMe={handleDeleteForMe} replyTo={mess.replyTo} reactions={mess.reactions} onReact={handleReact} onReply={setReplyTo} createdAt={mess.createdAt}/>
+  <SenderMessage key={mess._id} _id={mess._id} image={mess.image} video={mess.video} audio={mess.audio} file={mess.file} gif={mess.gif} sticker={mess.sticker} message={mess.message} status={mess.status} isDeletedForEveryone={mess.isDeletedForEveryone} onDeleteForMe={handleDeleteForMe} onDeleteForEveryone={handleDeleteForEveryone} replyTo={mess.replyTo} reactions={mess.reactions} onReact={handleReact} onReply={setReplyTo} createdAt={mess.createdAt}/>:
+  <ReceiverMessage key={mess._id} _id={mess._id} image={mess.image} video={mess.video} audio={mess.audio} file={mess.file} gif={mess.gif} sticker={mess.sticker} message={mess.message} isDeletedForEveryone={mess.isDeletedForEveryone} onDeleteForMe={handleDeleteForMe} replyTo={mess.replyTo} reactions={mess.reactions} onReact={handleReact} onReply={setReplyTo} createdAt={mess.createdAt}/>
 ))}
  
 
@@ -344,14 +386,30 @@ return ()=>{
        <input type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.zip" ref={image} hidden onChange={handleImage}/>
        <input type="text" className='w-full h-full px-[10px] outline-none border-0 text-[19px] text-white bg-transparent placeholder-white' placeholder='Message' onChange={(e)=>{
         setInput(e.target.value)
-        if(selectedUser && socket){
-          socket.emit("typing", { to: selectedUser._id })
-          if(typingTimeout.current){
-            clearTimeout(typingTimeout.current)
+        if(socket){
+          if(selectedUser){
+            socket.emit("typing", { 
+              to: selectedUser._id, 
+              senderName: userData?.name || userData?.userName || "Someone"
+            })
+            if(typingTimeout.current){
+              clearTimeout(typingTimeout.current)
+            }
+            typingTimeout.current = setTimeout(()=>{
+              socket.emit("stopTyping", { to: selectedUser._id })
+            }, 30000)
+          } else if(selectedGroup){
+            socket.emit("groupTyping", { 
+              groupId: selectedGroup._id,
+              senderName: userData?.name || userData?.userName || "Someone"
+            })
+            if(typingTimeout.current){
+              clearTimeout(typingTimeout.current)
+            }
+            typingTimeout.current = setTimeout(()=>{
+              socket.emit("stopGroupTyping", { groupId: selectedGroup._id })
+            }, 30000)
           }
-          typingTimeout.current = setTimeout(()=>{
-            socket.emit("stopTyping", { to: selectedUser._id })
-          }, 1000)
         }
        }} value={input}/>
 <div onClick={()=>image.current.click()}>
@@ -400,7 +458,7 @@ return ()=>{
           </div>
           <div className='max-h-[220px] overflow-auto flex flex-col gap-2'>
             {otherUsers?.filter(u=>selectedGroup.partcipants?.includes(u._id)).map(u=> (
-              <div className='flex items-center justify-between border rounded p-2'>
+              <div key={u._id} className='flex items-center justify-between border rounded p-2'>
                 <div className='flex items-center gap-2'>
                   <img src={u.image || dp} className='w-[32px] h-[32px] rounded-full'/>
                   <span>{u.name || u.userName}</span>
@@ -420,7 +478,7 @@ return ()=>{
             <span className='text-sm text-gray-600'>Add member</span>
             <div className='max-h-[160px] overflow-auto flex flex-col gap-2 mt-2'>
               {otherUsers?.filter(u=>!selectedGroup.partcipants?.includes(u._id)).map(u=> (
-                <div className='flex items-center justify-between border rounded p-2'>
+                <div key={u._id} className='flex items-center justify-between border rounded p-2'>
                   <div className='flex items-center gap-2'>
                     <img src={u.image || dp} className='w-[28px] h-[28px] rounded-full'/>
                     <span>{u.name || u.userName}</span>

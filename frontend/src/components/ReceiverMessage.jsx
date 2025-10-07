@@ -6,6 +6,12 @@ function ReceiverMessage({image,video,audio,file,gif,sticker,message,_id,onDelet
   let scroll=useRef()
   let {selectedUser}=useSelector(state=>state.user)
   let [open,setOpen]=useState(false)
+  
+  // Add safety checks
+  if (!_id) {
+    console.warn('ReceiverMessage: Missing _id prop');
+    return null;
+  }
   useEffect(()=>{
     scroll?.current.scrollIntoView({behavior:"smooth"})
   },[message,image])
@@ -21,7 +27,7 @@ function ReceiverMessage({image,video,audio,file,gif,sticker,message,_id,onDelet
   return (
     <div className='flex items-start gap-[10px] fade-in' >
            <div className='w-[40px] h-[40px] rounded-full overflow-hidden flex justify-center items-center bg-white cursor-pointer shadow-gray-500 shadow-lg hover-scale ' >
-         <img src={selectedUser.image || dp} alt="" className='h-[100%]'/>
+         <img src={selectedUser?.image || dp} alt="" className='h-[100%]'/>
          </div>
          <div ref={scroll} className='w-fit max-w-[500px] px-[20px] py-[10px]  bg-[rgb(23,151,194)] text-white text-[19px] rounded-tl-none rounded-2xl relative left-0  shadow-gray-400 shadow-lg gap-[10px] flex flex-col pop-in'>
         {replyTo && (
@@ -43,7 +49,7 @@ function ReceiverMessage({image,video,audio,file,gif,sticker,message,_id,onDelet
          </div>
        )}
        {isDeletedForEveryone && <span className='italic opacity-70'>Message deleted</span>}
-       {reactions && reactions.length > 0 && (
+       {reactions && Array.isArray(reactions) && reactions.length > 0 && (
          <div className='flex gap-1 flex-wrap'>
            {reactions.map((reaction, idx) => (
              <span key={idx} className='bg-white/20 px-2 py-1 rounded-full text-[12px]'>{reaction}</span>

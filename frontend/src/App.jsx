@@ -9,12 +9,12 @@ import Profile from './pages/Profile'
 import getOtherUsers from './customHooks/getOtherUsers'
 import {io} from "socket.io-client"
 import { serverUrl } from './main'
-import { setOnlineUsers, setSocket } from './redux/userSlice'
+import { setOnlineUsers, setSocket, setSelectedUser, setSelectedGroup } from './redux/userSlice'
 
 function App() {
   getCurrentUser()
   getOtherUsers()
-  let {userData,socket,onlineUsers}=useSelector(state=>state.user)
+  let {userData,socket,onlineUsers,otherUsers,groups}=useSelector(state=>state.user)
   let dispatch=useDispatch()
 
   useEffect(()=>{
@@ -32,17 +32,69 @@ function App() {
         socketio.on("getOnlineUsers",(users)=>{
           dispatch(setOnlineUsers(users))
         })
-        // basic push notification
-        socketio.on("newMessage", (mess)=>{
-          if(Notification?.permission==="granted"){
-            new Notification("New message", { body: mess.message || "New attachment" })
+        // Global WhatsApp-style push notifications
+        socketio.on("newMessage", (mess) => {
+          if (Notification?.permission !== "granted") {
+            Notification.requestPermission();
+            return;
           }
-        })
-        socketio.on("newGroupMessage", (mess)=>{
-          if(Notification?.permission==="granted"){
-            new Notification("New group message", { body: mess.message || "New attachment" })
+
+          const isChatPage = window.location.pathname === '/';
+          const isSameChat = mess.sender === userData?._id || mess.receiver === userData?._id;
+
+          // Show notification if tab is hidden OR not on chat page OR not in same chat
+          if (document.hidden || !isChatPage || !isSameChat) {
+            const senderName = mess.senderName || mess.sender?.name || mess.sender?.userName || "Someone";
+
+            const notification = new Notification(`💬 ${senderName} sent you a message`, {
+              body: mess.message || "New attachment",
+              icon: "/logo.png",
+            });
+
+            notification.onclick = () => {
+              window.focus();
+              // Navigate to the chat with the sender
+              if (mess.sender && mess.sender !== userData?._id) {
+                const senderUser = otherUsers?.find(u => u._id === mess.sender);
+                if (senderUser) {
+                  dispatch(setSelectedUser(senderUser));
+                  dispatch(setSelectedGroup(null));
+                }
+              }
+            };
           }
-        })
+        });
+        socketio.on("newGroupMessage", (mess) => {
+          if (Notification?.permission !== "granted") {
+            Notification.requestPermission();
+            return;
+          }
+
+          const isChatPage = window.location.pathname === '/';
+          const isSameGroup = mess.group && mess.group === mess.group;
+
+          // Show notification if tab is hidden OR not on chat page OR not in same group
+          if (document.hidden || !isChatPage || !isSameGroup) {
+            const senderName = mess.senderName || mess.sender?.name || mess.sender?.userName || "Someone";
+
+            const notification = new Notification(`💬 ${senderName} sent a group message`, {
+              body: mess.message || "New attachment",
+              icon: "/logo.png",
+            });
+
+            notification.onclick = () => {
+              window.focus();
+              // Navigate to the group chat
+              if (mess.group) {
+                const group = groups?.find(g => g._id === mess.group);
+                if (group) {
+                  dispatch(setSelectedGroup(group));
+                  dispatch(setSelectedUser(null));
+                }
+              }
+            };
+          }
+        });
         
         return ()=>socketio.close()
         
